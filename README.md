@@ -93,6 +93,12 @@ pnpm add -D eslint @eslint/js typescript-eslint
 pnpm add -D eslint-plugin-react-hooks eslint-plugin-react-refresh
 ```
 
+#### 4. Install Prettier
+```bash
+pnpm add -D prettier
+pnpm add -D eslint-config-prettier
+```
+
 ### 🚀 Development Commands
 
 Run these commands inside the frontend project directory.
@@ -128,6 +134,12 @@ Automatically fix supported linting issues:
 pnpm exec eslint . --fix
 ```
 Review the changes after running automatic fixes before committing your code.
+
+### Run Prettier
+| **Command** | **Purpose** |
+|---|---|
+| `pnpm format` | Format supported project files automatically |
+| `pnpm format:check` | Check formatting without changing files |
 
 ---
 ## 📜 Git Workflow & Commit Conventions
