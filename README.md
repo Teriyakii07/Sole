@@ -8,28 +8,28 @@
 
 ### 🛍️ Customer Features
 
-- 🏠 **Homepage** — Hero slideshow, product categories, featured products, new arrivals, best sellers, and promotions
-- 🔎 **Product Catalog** — Browse, search, filter, and sort footwear by category, brand, size, and price
-- ❤️ **Favorites** — Save products for later and view saved items
-- 🛒 **Shopping Cart** — Manage selected products, shoe sizes, colors, and quantities
-- 🔐 **Authentication** — Customer registration, login, and password recovery
-- 💳 **Checkout and Payments** — Review orders and pay through supported PayMongo payment methods
-- 📦 **Order Tracking** — View order history and track order status
-- 👤 **Customer Account** — Manage profiles, delivery addresses, and account settings
-- 📱 **Responsive Design** — Support desktop and mobile devices
+- **Homepage** — Hero slideshow, product categories, featured products, new arrivals, best sellers, and promotions
+- **Product Catalog** — Browse, search, filter, and sort footwear by category, brand, size, and price
+- **Favorites** — Save products for later and view saved items
+- **Shopping Cart** — Manage selected products, shoe sizes, colors, and quantities
+- **Authentication** — Customer registration, login, and password recovery
+- **Checkout and Payments** — Review orders and pay through supported PayMongo payment methods
+- **Order Tracking** — View order history and track order status
+- **Customer Account** — Manage profiles, delivery addresses, and account settings
+- **Responsive Design** — Support desktop and mobile devices
 
 ### 🧑‍💼 Admin Features
 
-- 📊 **Dashboard** — Overview of sales, orders, revenue, and customers
-- 👟 **Product Management** — Add, edit, view, and archive products
-- 📦 **Inventory Management** — Track stock by shoe size, color, and product variant
-- 🧾 **Order Management** — Review orders and update fulfillment status
-- 💰 **Payment Management** — Monitor payment statuses and transaction references
-- 🏷️ **Promotions** — Manage discount codes, sales, and promotional banners
-- 📈 **Sales Reports** — Generate sales, order, and inventory reports
-- 👥 **Customer Management** — View customer profiles and order histories
-- ⭐ **Reviews Management** — Moderate product reviews and reported content
-- 📩 **Notifications** — Configure email and SMS notifications
+- **Dashboard** — Overview of sales, orders, revenue, and customers
+- **Product Management** — Add, edit, view, and archive products
+- **Inventory Management** — Track stock by shoe size, color, and product variant
+- **Order Management** — Review orders and update fulfillment status
+- **Payment Management** — Monitor payment statuses and transaction references
+- **Promotions** — Manage discount codes, sales, and promotional banners
+- **Sales Reports** — Generate sales, order, and inventory reports
+- **Customer Management** — View customer profiles and order histories
+- **Reviews Management** — Moderate product reviews and reported content
+- **Notifications** — Configure email and SMS notifications
 
 > **Note:** Features will be implemented in phases. The final scope depends on development progress and the team's requirements.
 
@@ -93,10 +93,21 @@ pnpm add -D eslint @eslint/js typescript-eslint
 pnpm add -D eslint-plugin-react-hooks eslint-plugin-react-refresh
 ```
 
-#### 4. Install Prettier
+#### 5. Install Prettier
 ```bash
 pnpm add -D prettier
 pnpm add -D eslint-config-prettier
+```
+
+#### 6. Connection to Database
+```bash
+pnpm add @supabase/supabase-js
+```
+
+Create .env file and include this lines:
+```bash
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
 ### 🚀 Development Commands
