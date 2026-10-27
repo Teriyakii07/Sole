@@ -103,9 +103,7 @@ pnpm add -D eslint-config-prettier
 ```bash
 pnpm add @supabase/supabase-js
 ```
-```text
 Create .env file and include this lines:
-```
 ```bash
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
