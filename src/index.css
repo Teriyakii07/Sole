@@ -1,0 +1,44 @@
+
+@import "tailwindcss";
+
+@theme {
+  --color-sole-blue: #103b91;
+  --color-sole-red: #bd171e;
+  --color-sole-navy: #0b3288;
+  --font-sans: "Arial", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: Arial, sans-serif;
+  color: #080808;
+  background: white;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: #103b91;
+  color: white;
+}
