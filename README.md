@@ -99,7 +99,22 @@ pnpm add -D prettier
 pnpm add -D eslint-config-prettier
 ```
 
-#### 6. Connection to Database
+#### 6. Install TailwindCSS
+```bash
+pnpm install tailwindcss @tailwindcss/vit
+```
+#### 7. Install Routing
+```bash
+pnpm add react-router-dom lucide-react
+```
+
+#### 7. Install React
+```bash
+pnpm add react react-dom
+pnpm add -D @types/react @types/react-dom
+```
+
+#### 9. Connection to Database
 ```bash
 pnpm add @supabase/supabase-js
 ```
