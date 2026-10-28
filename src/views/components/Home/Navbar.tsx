@@ -26,7 +26,7 @@ export default function Navbar() {
         {/* Logo */}
         <a href="/" aria-label="SOLE home" className="shrink-0">
           <img
-            src="/images/sole-logo.png"
+            src="assets/images/sole-logo.png"
             alt="SOLE"
             className="h-14 w-24 object-contain sm:w-28"
           />
