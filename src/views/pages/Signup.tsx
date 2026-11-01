@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleSignUp } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
-// import { OTPModal } from '../components/Auth/OTPModal';
+import { OTPModal } from '../components/Auth/OTPModal';
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export const SignUpPage: React.FC = () => {
     confirmPassword: ''
   });
   const [formError, setFormError] = useState('');
-  // const [showOTP, setShowOTP] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
 
   const handleTabSwitch = (tab: 'login' | 'signup') => {
     setActiveTab(tab);
@@ -42,18 +42,12 @@ export const SignUpPage: React.FC = () => {
 
       const res = await handleSignUp(formData);
       {/* ibalik lang ni mag api na */}
-      // if (res.success && res.requiresOTP) {
-      //   setShowOTP(true);
-      // } else {
-      //   setFormError(res.message);
-      // }
+      if (res.success && res.requiresOTP) {
+        setShowOTP(true);
+      } else {
+        setFormError(res.message);
+      }
 
-          if (res.success) {
-            alert('Account created successfully! Please log in.');
-            navigate('/login');
-          } else {
-            setFormError(res.message);
-          }
 
     } catch (error) {
       setFormError('Unable to create your account. Please try again.');
@@ -173,7 +167,7 @@ export const SignUpPage: React.FC = () => {
       </form>
 
       {/* Registration Verification Modal */}
-      {/* <OTPModal
+      <OTPModal
         isOpen={showOTP}
         phone={formData.phone}
         purpose="REGISTRATION"
@@ -185,7 +179,7 @@ export const SignUpPage: React.FC = () => {
 
           navigate('/login');
         }}
-      /> */}
+      />
     </AuthLayout>
   );
 };

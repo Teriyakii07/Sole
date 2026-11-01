@@ -6,7 +6,7 @@ import type {
 } from '../models/Auth';
 
 import { supabase } from '../lib/supabaseClient';
-// import { sendPhilSMSOTP } from './otpController';
+import { sendPhilSMSOTP } from './otpController';
 
 
 export const handleLogin = async (
@@ -60,23 +60,17 @@ export const handleLogin = async (
     }
     //ibalik lang ni mag api na
     // Send 2FA OTP to registered phone
-    // await sendPhilSMSOTP(
-    //   profile.phone_number,
-    //   '2FA_LOGIN'
-    // );
-
-    // return {
-    //   success: true,
-    //   requiresOTP: true,
-    //   message: 'OTP sent to your registered phone number.',
-    //   phone: profile.phone_number,
-    //   userId: data.user.id
-    // };
+    await sendPhilSMSOTP(
+      profile.phone_number,
+      '2FA_LOGIN'
+    );
 
     return {
       success: true,
-      message: 'Login successful!',
-      requiresOTP: false,
+      requiresOTP: true,
+      message: 'OTP sent to your registered phone number.',
+      phone: profile.phone_number,
+      userId: data.user.id
     };
 
   } catch (error) {
@@ -148,24 +142,19 @@ export const handleSignUp = async (
     }
     //ibalik lang ni mag api na
     // Send registration OTP
-    // await sendPhilSMSOTP(
-    //   phone,
-    //   'REGISTRATION'
-    // );
-
-    // return {
-    //   success: true,
-    //   requiresOTP: true,
-    //   message: 'Account created. Please verify your phone number.',
-    //   phone,
-    //   userId: result.user.id
-    // };
+    await sendPhilSMSOTP(
+      phone,
+      'REGISTRATION'
+    );
 
     return {
       success: true,
-      message: 'Registration successful!',
-      requiresOTP: false,
+      requiresOTP: true,
+      message: 'Account created. Please verify your phone number.',
+      phone,
+      userId: result.user.id
     };
+
 
   } catch (error) {
     console.error('Registration error:', error);

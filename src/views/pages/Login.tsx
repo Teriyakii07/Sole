@@ -7,15 +7,15 @@ import {
 } from '../../controllers/authController';
 
 import { AuthLayout } from '../components/Auth/AuthLayout';
-// import { OTPModal } from '../components/Auth/OTPModal';
+import { OTPModal } from '../components/Auth/OTPModal';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [credentials, setCredentials] = useState({ usernameOrEmail: '', password: '' });
   const [loginError, setLoginError] = useState('');
-  // const [showOTP, setShowOTP] = useState(false);
-  // const [otpPhone, setOtpPhone] = useState('');
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpPhone, setOtpPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotPassView, setIsForgotPassView] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -39,19 +39,13 @@ export const LoginPage: React.FC = () => {
       }
 
       const res = await handleLogin(credentials);
-      {/* ibalik lang ni mag api na */}
-      // if (res.success && res.requiresOTP) {
-      //   setOtpPhone(res.phone || '');
-      //   setShowOTP(true);
-      // } else {
-      //   setLoginError(res.message);
-      // }
+      if (res.success && res.requiresOTP) {
+        setOtpPhone(res.phone || '');
+        setShowOTP(true);
+      } else {
+        setLoginError(res.message);
+      }
 
-          if (res.success) {
-            navigate('/');
-          } else {
-            setLoginError(res.message);
-          }
 
     } catch (error) {
       setLoginError('Unable to log in. Please try again.');
@@ -201,7 +195,7 @@ export const LoginPage: React.FC = () => {
       </div>
       {/* ibalik lang ni mag api na */}
       {/* 2FA Login OTP Modal */}
-        {/* <OTPModal
+        <OTPModal
           isOpen={showOTP}
           phone={otpPhone}
           purpose="2FA_LOGIN"
@@ -210,7 +204,7 @@ export const LoginPage: React.FC = () => {
             setShowOTP(false);
             navigate('/');
           }}
-        /> */}
+        />
     </AuthLayout>
   );
 };
