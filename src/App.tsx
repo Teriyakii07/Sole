@@ -13,7 +13,7 @@ import FAQPage from './views/pages/FAQPage'
 import { LoginPage } from './views/pages/Login'
 import { SignUpPage } from './views/pages/Signup'
 
-// Jett: ADDED Import Product Catalog Details Page & Search Page
+// Jett: ADDED Import Product Catalog Details Page
 import ProductCatalog from './views/pages/ProductCatalog'
 import SearchPage from './views/pages/Searchpage'
 
@@ -28,22 +28,14 @@ function PlaceholderPage({ title }: { title: string }) {
   )
 }
 
-
 function MainLayout() {
   const location = useLocation()
 
-  // Check if current route is Login or SignUp
-  const isAuthPage =
-    location.pathname === '/login' ||
-    location.pathname === '/signup'
-
-  // Check if current route is Admin
-  const isAdmin = location.pathname.startsWith('/admin')
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup'
 
   return (
     <>
-      {/* Hide customer Navbar on Auth and Admin pages */}
-      {!isAuthPage && !isAdmin && <Navbar />}
+      {!isAuthPage && <Navbar />}
 
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -56,13 +48,9 @@ function MainLayout() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/faqs" element={<FAQPage />} />
 
-        {/* Search Page */}
         <Route path="/search" element={<SearchPage />} />
-
-        {/* Product Catalog Page */}
         <Route path="/product/:id" element={<ProductCatalog />} />
 
-        {/* Auth Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
 

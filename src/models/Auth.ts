@@ -1,4 +1,3 @@
-// src/models/Auth.ts
 
 export interface LoginPayload {
   usernameOrEmail: string;
@@ -25,4 +24,24 @@ export interface AuthResponse {
   message: string;
   requiresOTP?: boolean;
   token?: string;
+  phone?: string;
+  userId?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string | undefined;
+}
+
+export interface PasswordResetPayload {
+  email: string;
 }

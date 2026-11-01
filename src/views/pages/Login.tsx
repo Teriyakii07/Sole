@@ -12,6 +12,12 @@ import {
 } from 'lucide-react';
 
 import { handleLogin } from '../../controllers/authController';
+
+import {
+  handleLogin,
+  handleForgotPassword
+} from '../../controllers/authController';
+
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
 
@@ -37,6 +43,11 @@ export const LoginPage: React.FC = () => {
 
   const [showOTP, setShowOTP] = useState(false);
 
+  const [credentials, setCredentials] = useState({ usernameOrEmail: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpPhone, setOtpPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isForgotPassView, setIsForgotPassView] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
@@ -105,6 +116,27 @@ export const LoginPage: React.FC = () => {
       setErrors({
         general: 'Something went wrong while signing in. Please check your connection and try again.'
       });
+
+    setLoginError('');
+    setIsLoading(true);
+
+    try {
+      if (!credentials.usernameOrEmail || !credentials.password) {
+        setLoginError('Please enter both email and password.');
+        return;
+      }
+
+      const res = await handleLogin(credentials);
+      if (res.success && res.requiresOTP) {
+        setOtpPhone(res.phone || '');
+        setShowOTP(true);
+      } else {
+        setLoginError(res.message);
+      }
+
+
+    } catch (error) {
+      setLoginError('Unable to log in. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -401,18 +433,18 @@ export const LoginPage: React.FC = () => {
           </form>
         )}
       </div>
-
-      {/* OTP MODAL */}
-      <OTPModal
-        isOpen={showOTP}
-        phone="+639123456789"
-        purpose="2FA_LOGIN"
-        onClose={() => setShowOTP(false)}
-        onSuccess={() => {
-          setShowOTP(false);
-          navigate('/');
-        }}
-      />
+      {/* ibalik lang ni mag api na */}
+      {/* 2FA Login OTP Modal */}
+        <OTPModal
+          isOpen={showOTP}
+          phone={otpPhone}
+          purpose="2FA_LOGIN"
+          onClose={() => setShowOTP(false)}
+          onSuccess={() => {
+            setShowOTP(false);
+            navigate('/');
+          }}
+        />
     </AuthLayout>
   );
 };

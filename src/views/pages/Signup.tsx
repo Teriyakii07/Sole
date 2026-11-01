@@ -150,6 +150,32 @@ export const SignUpPage: React.FC = () => {
       setErrors({
         general: 'Something went wrong. Please check your connection and try again.'
       });
+
+    setFormError('');
+    setIsLoading(true);
+
+    try {
+      if (formData.password !== formData.confirmPassword) {
+        setFormError('Passwords do not match.');
+        return;
+      }
+
+      if (formData.password.length < 8) {
+        setFormError('Password must contain at least 8 characters.');
+        return;
+      }
+
+      const res = await handleSignUp(formData);
+      {/* ibalik lang ni mag api na */}
+      if (res.success && res.requiresOTP) {
+        setShowOTP(true);
+      } else {
+        setFormError(res.message);
+      }
+
+
+    } catch (error) {
+      setFormError('Unable to create your account. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -405,7 +431,11 @@ export const SignUpPage: React.FC = () => {
         phone={formData.phone.replace(/[\s-]/g, '')}
         purpose="REGISTRATION"
         onClose={() => setShowOTP(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
+          setShowOTP(false);
+
+          alert('Phone verification successful! Please log in.');
+
           navigate('/login');
         }}
       />
