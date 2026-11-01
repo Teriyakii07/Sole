@@ -33,9 +33,11 @@ function MainLayout() {
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup'
 
+  const isAdmin = location.pathname.startsWith('/admin')
+
   return (
     <>
-      {!isAuthPage && <Navbar />}
+      {!isAuthPage && !isAdmin && <Navbar />}
 
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -67,7 +69,6 @@ function MainLayout() {
 export default function App() {
   return (
     <BrowserRouter>
-      {/* suggest ni chatgpt hahha UPDATED: Render MainLayout inside BrowserRouter so useLocation works */}
       <MainLayout />
     </BrowserRouter>
   )

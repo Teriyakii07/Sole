@@ -12,12 +12,6 @@ import {
 } from 'lucide-react';
 
 import { handleLogin } from '../../controllers/authController';
-
-import {
-  handleLogin,
-  handleForgotPassword
-} from '../../controllers/authController';
-
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
 
@@ -32,6 +26,7 @@ export const LoginPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
 
+  // Login states
   const [credentials, setCredentials] = useState({
     usernameOrEmail: '',
     password: ''
@@ -41,13 +36,11 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [showOTP, setShowOTP] = useState(false);
-
-  const [credentials, setCredentials] = useState({ usernameOrEmail: '', password: '' });
-  const [loginError, setLoginError] = useState('');
+  // OTP states
   const [showOTP, setShowOTP] = useState(false);
   const [otpPhone, setOtpPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Forgot password states
   const [isForgotPassView, setIsForgotPassView] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
@@ -58,7 +51,6 @@ export const LoginPage: React.FC = () => {
     navigate(`/${tab}`);
   };
 
-  // Validate login fields
   const validateLogin = (): boolean => {
     const newErrors: LoginErrors = {};
 
@@ -66,7 +58,8 @@ export const LoginPage: React.FC = () => {
     const password = credentials.password;
 
     if (!username) {
-      newErrors.usernameOrEmail = 'Please enter your username or email address.';
+      newErrors.usernameOrEmail =
+        'Please enter your username or email address.';
     } else if (
       username.includes('@') &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)
@@ -91,11 +84,11 @@ export const LoginPage: React.FC = () => {
 
   const onLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
 
     if (!validateLogin()) return;
 
     setIsLoading(true);
+    setErrors({});
 
     try {
       const res = await handleLogin({
@@ -103,46 +96,33 @@ export const LoginPage: React.FC = () => {
         password: credentials.password
       });
 
-      if (res.success && res.requiresOTP) {
-        setShowOTP(true);
-      } else if (res.success) {
-        navigate('/');
-      } else {
+      if (!res.success) {
         setErrors({
-          general: res.message || 'Login failed. Please check your credentials and try again.'
+          general:
+            res.message ||
+            'Login failed. Please check your credentials and try again.'
         });
-      }
-    } catch {
-      setErrors({
-        general: 'Something went wrong while signing in. Please check your connection and try again.'
-      });
-
-    setLoginError('');
-    setIsLoading(true);
-
-    try {
-      if (!credentials.usernameOrEmail || !credentials.password) {
-        setLoginError('Please enter both email and password.');
         return;
       }
 
-      const res = await handleLogin(credentials);
-      if (res.success && res.requiresOTP) {
+      if (res.requiresOTP) {
         setOtpPhone(res.phone || '');
         setShowOTP(true);
       } else {
-        setLoginError(res.message);
+        navigate('/');
       }
-
-
     } catch (error) {
-      setLoginError('Unable to log in. Please try again.');
+      console.error('Login error:', error);
+
+      setErrors({
+        general:
+          'Something went wrong while signing in. Please check your connection and try again.'
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Forgot password validation
   const handleForgotPassword = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -166,9 +146,10 @@ export const LoginPage: React.FC = () => {
 
   const inputClass = (hasError: boolean) =>
     `w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all
-    ${hasError
-      ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100'
-      : 'border-slate-200 focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
+    ${
+      hasError
+        ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100'
+        : 'border-slate-200 focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
     }`;
 
   return (
@@ -179,9 +160,11 @@ export const LoginPage: React.FC = () => {
         <div className="mb-7">
           <div className="mb-3 flex items-center justify-center gap-2">
             <span className="h-1 w-7 rounded-full bg-[#D7192D]" />
+
             <span className="text-[10px] font-bold tracking-[3px] text-[#123A8C]">
-              SOLE ACCOUNT
+              ACCOUNT
             </span>
+
             <span className="h-1 w-7 rounded-full bg-[#D7192D]" />
           </div>
 
@@ -198,41 +181,44 @@ export const LoginPage: React.FC = () => {
 
         {/* LOGIN / SIGNUP TABS */}
         {!isForgotPassView && (
-        <div className="flex justify-center mb-7">
-          <div className="w-full h-[46px] bg-[#E2E8F0] p-1 rounded-xl flex">
+          <div className="mb-7 flex justify-center">
+            <div className="flex h-[46px] w-full rounded-xl bg-[#E2E8F0] p-1">
 
-            <button
-              type="button"
-              onClick={() => handleTabSwitch('login')}
-              className={`w-1/2 h-full flex items-center justify-center text-xs font-semibold rounded-lg transition-all duration-200 ${
-                activeTab === 'login'
-                  ? 'bg-white text-[#123A8C] shadow-sm'
-                  : 'bg-transparent text-slate-500'
-              }`}
-            >
-              Login
-            </button>
+              <button
+                type="button"
+                onClick={() => handleTabSwitch('login')}
+                className={`flex h-full w-1/2 items-center justify-center rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  activeTab === 'login'
+                    ? 'bg-white text-[#123A8C] shadow-sm'
+                    : 'bg-transparent text-slate-500'
+                }`}
+              >
+                Login
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleTabSwitch('signup')}
-              className={`w-1/2 h-full flex items-center justify-center text-xs font-semibold rounded-lg transition-all duration-200 ${
-                activeTab === 'signup'
-                  ? 'bg-white text-[#123A8C] shadow-sm'
-                  : 'bg-transparent text-slate-500'
-              }`}
-            >
-              Sign Up
-            </button>
+              <button
+                type="button"
+                onClick={() => handleTabSwitch('signup')}
+                className={`flex h-full w-1/2 items-center justify-center rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  activeTab === 'signup'
+                    ? 'bg-white text-[#123A8C] shadow-sm'
+                    : 'bg-transparent text-slate-500'
+                }`}
+              >
+                Sign Up
+              </button>
 
+            </div>
           </div>
-        </div>
         )}
 
         {/* FORGOT PASSWORD */}
         {isForgotPassView ? (
-          <form onSubmit={handleForgotPassword} className="space-y-5" noValidate>
-
+          <form
+            onSubmit={handleForgotPassword}
+            className="space-y-5"
+            noValidate
+          >
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
                 Email Address
@@ -294,8 +280,11 @@ export const LoginPage: React.FC = () => {
         ) : (
 
           /* LOGIN FORM */
-          <form onSubmit={onLoginSubmit} className="space-y-5" noValidate>
-
+          <form
+            onSubmit={onLoginSubmit}
+            className="space-y-5"
+            noValidate
+          >
             {/* USERNAME / EMAIL */}
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
@@ -393,6 +382,7 @@ export const LoginPage: React.FC = () => {
             {errors.general && (
               <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 <AlertCircle size={17} className="mt-0.5 shrink-0" />
+
                 <div>
                   <p className="font-bold">Unable to sign in</p>
                   <p className="mt-1 leading-5">{errors.general}</p>
@@ -429,22 +419,21 @@ export const LoginPage: React.FC = () => {
                 Forgot Password?
               </button>
             </div>
-
           </form>
         )}
       </div>
-      {/* ibalik lang ni mag api na */}
-      {/* 2FA Login OTP Modal */}
-        <OTPModal
-          isOpen={showOTP}
-          phone={otpPhone}
-          purpose="2FA_LOGIN"
-          onClose={() => setShowOTP(false)}
-          onSuccess={() => {
-            setShowOTP(false);
-            navigate('/');
-          }}
-        />
+
+      {/* 2FA LOGIN OTP MODAL */}
+      <OTPModal
+        isOpen={showOTP}
+        phone={otpPhone}
+        purpose="2FA_LOGIN"
+        onClose={() => setShowOTP(false)}
+        onSuccess={() => {
+          setShowOTP(false);
+          navigate('/');
+        }}
+      />
     </AuthLayout>
   );
 };

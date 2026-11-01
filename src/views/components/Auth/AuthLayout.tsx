@@ -195,13 +195,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {/* Red accent */}
         <div className="pointer-events-none absolute top-16 right-0 h-1 w-16 bg-[#D7192D]" />
 
-        {/* Small top label */}
-        <div className="absolute top-7 left-0 right-0 flex justify-center">
-          <p className="text-[10px] font-bold tracking-[3px] text-[#123A8C]/50">
-            WELCOME TO SOLE
-          </p>
-        </div>
-
         {/* FORM CONTAINER WITH TRANSITION */}
         <div
           key={activeTab}

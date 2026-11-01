@@ -42,13 +42,11 @@ export const SignUpPage: React.FC = () => {
   const [showOTP, setShowOTP] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Switch between Login and Sign Up
   const handleTabSwitch = (tab: 'login' | 'signup') => {
     setActiveTab(tab);
     navigate(`/${tab}`);
   };
 
-  // Handle input changes
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -62,7 +60,6 @@ export const SignUpPage: React.FC = () => {
     }));
   };
 
-  // Validate form fields
   const validateForm = () => {
     const newErrors: FormErrors = {};
 
@@ -119,7 +116,6 @@ export const SignUpPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit registration
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -133,53 +129,33 @@ export const SignUpPage: React.FC = () => {
         ...formData,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(),
         phone: formData.phone.replace(/[\s-]/g, '')
       });
 
+      if (!res.success) {
+        setErrors({
+          general: res.message || 'Unable to create your account.'
+        });
+        return;
+      }
+
+      // Open OTP modal
       if (res.requiresOTP) {
         setShowOTP(true);
-      } else if (!res.success) {
-        setErrors({
-          general: res.message || 'Unable to create your account. Please try again.'
-        });
-      } else {
-        navigate('/login');
       }
+
     } catch (error) {
+      console.error('Signup error:', error);
+
       setErrors({
-        general: 'Something went wrong. Please check your connection and try again.'
+        general: 'Something went wrong. Please try again.'
       });
-
-    setFormError('');
-    setIsLoading(true);
-
-    try {
-      if (formData.password !== formData.confirmPassword) {
-        setFormError('Passwords do not match.');
-        return;
-      }
-
-      if (formData.password.length < 8) {
-        setFormError('Password must contain at least 8 characters.');
-        return;
-      }
-
-      const res = await handleSignUp(formData);
-      {/* ibalik lang ni mag api na */}
-      if (res.success && res.requiresOTP) {
-        setShowOTP(true);
-      } else {
-        setFormError(res.message);
-      }
-
-
-    } catch (error) {
-      setFormError('Unable to create your account. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   // Input styling
   const inputClass = (hasError: boolean) =>
@@ -199,7 +175,7 @@ export const SignUpPage: React.FC = () => {
           <span className="w-7 h-1 bg-[#D7192D] rounded-full"></span>
 
           <span className="text-[10px] font-bold tracking-[0.3em] text-[#123A8C]">
-            SOLE ACCOUNT
+            ACCOUNT
           </span>
 
           <span className="w-7 h-1 bg-[#D7192D] rounded-full"></span>
@@ -443,3 +419,5 @@ export const SignUpPage: React.FC = () => {
     </AuthLayout>
   );
 };
+
+
