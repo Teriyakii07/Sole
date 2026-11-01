@@ -42,3 +42,20 @@ img {
   background: #103b91;
   color: white;
 }
+
+/* SOLE Login and Sign Up Transition */
+@keyframes authFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-form-enter {
+  animation: authFadeIn 0.3s ease-out;
+}
