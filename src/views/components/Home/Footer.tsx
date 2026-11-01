@@ -94,7 +94,7 @@ export default function Footer() {
         <div className={columnStyle}>
           <h3 className={headingStyle}>HELP &amp; SUPPORT</h3>
           <Link to="/contact" className={linkStyle}>Contact Us</Link>
-          <Link to="/faq" className={linkStyle}>FAQs</Link>
+          <Link to="/faqs" className={linkStyle}>FAQs</Link>
         </div>
 
         {/* ABOUT SOLE */}

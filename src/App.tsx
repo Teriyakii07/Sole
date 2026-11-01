@@ -6,6 +6,8 @@ import Footer from './views/components/Home/Footer'
 import Profile from './views/pages/Profile'
 import AboutUs from './views/pages/Aboutus'
 import ContactUs from './views/pages/ContactUs'
+import AdminDashboard from './views/pages/AdminDashboard'
+import FAQPage from './views/pages/FAQPage'
 
 // Jett: ADDED Import Auth MVC Pages
 import { LoginPage } from './views/pages/Login'
@@ -43,6 +45,8 @@ function MainLayout() {
         <Route path="/favorites" element={<PlaceholderPage title="Favorites" />} />
         <Route path="/cart" element={<ShoppingCartView />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/faqs" element={<FAQPage />} />
 
         <Route path="/search" element={<SearchPage />} />
         <Route path="/product/:id" element={<ProductCatalog />} />
@@ -53,11 +57,12 @@ function MainLayout() {
         <Route path="*" element={<PlaceholderPage title="Page not found" />} />
       </Routes>
 
-      {/* Jett: ADDED: Hide Footer on Auth pages(login and sign up po) */}
-      {!isAuthPage && <Footer />}
+      {/* Hide customer Footer on Auth and Admin pages */}
+      {!isAuthPage && !isAdmin && <Footer />}
     </>
   )
 }
+
 
 export default function App() {
   return (
