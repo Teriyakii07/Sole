@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleSignUp } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
-import { OTPModal } from '../components/Auth/OTPModal';
+// import { OTPModal } from '../components/Auth/OTPModal';
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export const SignUpPage: React.FC = () => {
     confirmPassword: ''
   });
   const [formError, setFormError] = useState('');
-  const [showOTP, setShowOTP] = useState(false);
+  // const [showOTP, setShowOTP] = useState(false);
 
   const handleTabSwitch = (tab: 'login' | 'signup') => {
     setActiveTab(tab);
@@ -25,21 +25,44 @@ export const SignUpPage: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setFormError('');
+    setIsLoading(true);
 
-    if (formData.password !== formData.confirmPassword) {
-      setFormError('Passwords do not match.');
-      return;
-    }
+    try {
+      if (formData.password !== formData.confirmPassword) {
+        setFormError('Passwords do not match.');
+        return;
+      }
 
-    const res = await handleSignUp(formData);
-    if (res.requiresOTP) {
-      // Prompt modal ONLY after completing all form details
-      setShowOTP(true);
-    } else if (!res.success) {
-      setFormError(res.message);
+      if (formData.password.length < 8) {
+        setFormError('Password must contain at least 8 characters.');
+        return;
+      }
+
+      const res = await handleSignUp(formData);
+      {/* ibalik lang ni mag api na */}
+      // if (res.success && res.requiresOTP) {
+      //   setShowOTP(true);
+      // } else {
+      //   setFormError(res.message);
+      // }
+
+          if (res.success) {
+            alert('Account created successfully! Please log in.');
+            navigate('/login');
+          } else {
+            setFormError(res.message);
+          }
+
+    } catch (error) {
+      setFormError('Unable to create your account. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <AuthLayout activeTab={activeTab} onTabChange={handleTabSwitch}>
@@ -142,23 +165,27 @@ export const SignUpPage: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full py-3 bg-[#2B41A7] text-white font-bold rounded-xl mt-2 hover:bg-blue-900 transition-colors"
+          disabled={isLoading}
+          className="w-full py-3 bg-[#2B41A7] text-white font-bold rounded-xl mt-2 hover:bg-blue-900 transition-colors disabled:opacity-50"
         >
-          Create Account
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </button>
       </form>
 
       {/* Registration Verification Modal */}
-      <OTPModal
+      {/* <OTPModal
         isOpen={showOTP}
         phone={formData.phone}
         purpose="REGISTRATION"
         onClose={() => setShowOTP(false)}
-        onSuccess={() => {
-          alert('Registration successful! Please log in.')
-          navigate('/login') // Redirect to Login page after successful sign up
+        onSuccess={async () => {
+          setShowOTP(false);
+
+          alert('Phone verification successful! Please log in.');
+
+          navigate('/login');
         }}
-      />
+      /> */}
     </AuthLayout>
   );
 };

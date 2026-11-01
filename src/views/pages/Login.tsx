@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleLogin } from '../../controllers/authController';
+
+import {
+  handleLogin,
+  handleForgotPassword
+} from '../../controllers/authController';
+
 import { AuthLayout } from '../components/Auth/AuthLayout';
-import { OTPModal } from '../components/Auth/OTPModal';
+// import { OTPModal } from '../components/Auth/OTPModal';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
-  
-  // Login Form States
   const [credentials, setCredentials] = useState({ usernameOrEmail: '', password: '' });
   const [loginError, setLoginError] = useState('');
-  
-  // OTP Modal State
-  const [showOTP, setShowOTP] = useState(false);
-  
-  // Forgot Password States
+  // const [showOTP, setShowOTP] = useState(false);
+  // const [otpPhone, setOtpPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isForgotPassView, setIsForgotPassView] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
@@ -27,30 +28,48 @@ export const LoginPage: React.FC = () => {
 
   const onLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setLoginError('');
+    setIsLoading(true);
 
-    if (!credentials.usernameOrEmail || !credentials.password) {
-      setLoginError('Please enter both email/username and password.');
-      return;
-    }
+    try {
+      if (!credentials.usernameOrEmail || !credentials.password) {
+        setLoginError('Please enter both email and password.');
+        return;
+      }
 
-    const res = await handleLogin(credentials);
-    if (res.success && res.requiresOTP) {
-      setShowOTP(true);
-    } else if (!res.success) {
-      setLoginError(res.message);
+      const res = await handleLogin(credentials);
+      {/* ibalik lang ni mag api na */}
+      // if (res.success && res.requiresOTP) {
+      //   setOtpPhone(res.phone || '');
+      //   setShowOTP(true);
+      // } else {
+      //   setLoginError(res.message);
+      // }
+
+          if (res.success) {
+            navigate('/');
+          } else {
+            setLoginError(res.message);
+          }
+
+    } catch (error) {
+      setLoginError('Unable to log in. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPasswordSubmit = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
-    if (!resetEmail) {
-      setResetMessage('Please provide a valid email address.');
-      return;
-    }
 
-    // Hardcoded Forgot Password action
-    setResetMessage(`Password reset link sent to ${resetEmail} (Demo mode)`);
+    setResetMessage('');
+
+    const result = await handleForgotPassword(resetEmail);
+
+    setResetMessage(result.message);
   };
 
   return (
@@ -88,7 +107,7 @@ export const LoginPage: React.FC = () => {
 
         {isForgotPassView ? (
           /* Forgot Password View */
-          <form onSubmit={handleForgotPassword} className="space-y-4">
+          <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                 Enter your email address
@@ -132,7 +151,7 @@ export const LoginPage: React.FC = () => {
             <form onSubmit={onLoginSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                  Username or Email
+                  Email Address
                 </label>
                 <input
                   type="text"
@@ -161,9 +180,10 @@ export const LoginPage: React.FC = () => {
               {/* Login Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#2B41A7] text-white font-bold rounded-xl hover:bg-blue-900 transition-colors"
+                disabled={isLoading}
+                className="w-full py-3 bg-[#2B41A7] text-white font-bold rounded-xl hover:bg-blue-900 transition-colors disabled:opacity-50"
               >
-                Login
+                {isLoading ? 'Logging in...' : 'Login'}
               </button>
 
               {/* Right-aligned Forgot Password link directly below the Login button */}
@@ -179,18 +199,18 @@ export const LoginPage: React.FC = () => {
             </form>
         )}
       </div>
-
+      {/* ibalik lang ni mag api na */}
       {/* 2FA Login OTP Modal */}
-      <OTPModal
-        isOpen={showOTP}
-        phone="+639123456789"
-        purpose="2FA_LOGIN"
-        onClose={() => setShowOTP(false)}
-        onSuccess={() => {
-          alert('Login successful!')
-          navigate('/') // Redirect to Homepage after successful login
-        }}
-      />
+        {/* <OTPModal
+          isOpen={showOTP}
+          phone={otpPhone}
+          purpose="2FA_LOGIN"
+          onClose={() => setShowOTP(false)}
+          onSuccess={() => {
+            setShowOTP(false);
+            navigate('/');
+          }}
+        /> */}
     </AuthLayout>
   );
 };

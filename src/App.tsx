@@ -11,7 +11,7 @@ import ContactUs from './views/pages/ContactUs'
 import { LoginPage } from './views/pages/Login'
 import { SignUpPage } from './views/pages/Signup'
 
-// Jett: ADDED Import Product Catalog Details Page & Search Page
+// Jett: ADDED Import Product Catalog Details Page
 import ProductCatalog from './views/pages/ProductCatalog'
 import SearchPage from './views/pages/Searchpage'
 
@@ -26,16 +26,13 @@ function PlaceholderPage({ title }: { title: string }) {
   )
 }
 
-// Jett: ADDED Main Layout wrapper to check URL path for Navbar/Footer visibility
 function MainLayout() {
   const location = useLocation()
 
-  // Jett: add to Check if current route is Login or SignUp
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup'
 
   return (
     <>
-      {/* jett added Hide Navbar on Auth pages */}
       {!isAuthPage && <Navbar />}
 
       <Routes>
@@ -47,13 +44,9 @@ function MainLayout() {
         <Route path="/cart" element={<ShoppingCartView />} />
         <Route path="/profile" element={<Profile />} />
 
-        {/* Jett: ADDED: Route for Search Page */}
         <Route path="/search" element={<SearchPage />} />
-
-        {/* Jett: ADDED: Route for Product Datasheet/Catalog Page */}
         <Route path="/product/:id" element={<ProductCatalog />} />
 
-        {/* Jett: ADDED: Auth Routes connected to MVC Views */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
 
