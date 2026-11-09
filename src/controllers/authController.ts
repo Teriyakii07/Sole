@@ -1,18 +1,17 @@
+
 import type {
   LoginPayload,
   SignUpPayload,
   AuthResponse,
   UserProfile
-} from '../models/Auth';
+} from '../views/types/AuthTypes';
 
 import { supabase } from '../lib/supabaseClient';
 import { sendPhilSMSOTP } from './otpController';
 
-
 export const handleLogin = async (
   credentials: LoginPayload
 ): Promise<AuthResponse> => {
-
   try {
     const email = credentials.usernameOrEmail.trim().toLowerCase();
 
@@ -23,27 +22,18 @@ export const handleLogin = async (
       };
     }
 
-    // Authenticate using Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: credentials.password
     });
 
-    if (error) {
+    if (error || !data.user) {
       return {
         success: false,
         message: 'Invalid email or password.'
       };
     }
 
-    if (!data.user) {
-      return {
-        success: false,
-        message: 'Unable to retrieve your account.'
-      };
-    }
-
-    // Retrieve registered phone number
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('phone_number')
@@ -58,23 +48,37 @@ export const handleLogin = async (
         message: 'Your account does not have a registered phone number.'
       };
     }
-    //ibalik lang ni mag api na
-    // Send 2FA OTP to registered phone
-    await sendPhilSMSOTP(
+
+    const otpResult = await sendPhilSMSOTP(
       profile.phone_number,
       '2FA_LOGIN'
     );
 
+    if (!otpResult.success) {
+      await supabase.auth.signOut();
+
+      return {
+        success: false,
+        message: otpResult.message ?? 'Unable to send OTP. Please try again.'
+      };
+    }
+
+    // Do not leave an authenticated session active while
+    // the user has not completed OTP verification.
+    await supabase.auth.signOut();
+
     return {
       success: true,
       requiresOTP: true,
-      message: 'OTP sent to your registered phone number.',
-      phone: profile.phone_number,
-      userId: data.user.id
+      message: otpResult.message ?? 'OTP sent successfully.',
+      phone: otpResult.phone,
+      userId: data.user.id,
+      otpHash: otpResult.otpHash,
+      createdAt: otpResult.createdAt
     };
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login Error:', error);
 
     return {
       success: false,
@@ -86,9 +90,7 @@ export const handleLogin = async (
 export const handleSignUp = async (
   data: SignUpPayload
 ): Promise<AuthResponse> => {
-
   try {
-    // Validate password
     if (data.password !== data.confirmPassword) {
       return {
         success: false,
@@ -104,20 +106,30 @@ export const handleSignUp = async (
     }
 
     const email = data.email.trim().toLowerCase();
-    const phone = data.phone.trim();
+    const phone = data.phone.replace(/[\s-]/g, '');
 
-    if (!email || !phone || !data.firstName.trim() || !data.lastName.trim()) {
+    if (
+      !email ||
+      !phone ||
+      !data.firstName.trim() ||
+      !data.lastName.trim()
+    ) {
       return {
         success: false,
         message: 'Please complete all required fields.'
       };
     }
 
-    // Create account through Supabase Auth
+    if (!/^(\+639\d{9}|09\d{9})$/.test(phone)) {
+      return {
+        success: false,
+        message: 'Please enter a valid Philippine phone number.'
+      };
+    }
+
     const { data: result, error } = await supabase.auth.signUp({
       email,
       password: data.password,
-
       options: {
         data: {
           first_name: data.firstName.trim(),
@@ -140,24 +152,31 @@ export const handleSignUp = async (
         message: 'Unable to create your account.'
       };
     }
-    //ibalik lang ni mag api na
-    // Send registration OTP
-    await sendPhilSMSOTP(
+
+    const otpResult = await sendPhilSMSOTP(
       phone,
       'REGISTRATION'
     );
+
+    if (!otpResult.success) {
+      return {
+        success: false,
+        message: otpResult.message ?? 'Unable to send OTP. Please try again.'
+      };
+    }
 
     return {
       success: true,
       requiresOTP: true,
       message: 'Account created. Please verify your phone number.',
-      phone,
-      userId: result.user.id
+      phone: otpResult.phone,
+      userId: result.user.id,
+      otpHash: otpResult.otpHash,
+      createdAt: otpResult.createdAt
     };
 
-
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Registration Error:', error);
 
     return {
       success: false,
@@ -167,26 +186,34 @@ export const handleSignUp = async (
 };
 
 export const handleLogout = async (): Promise<AuthResponse> => {
+  try {
+    const { error } = await supabase.auth.signOut();
 
-  const { error } = await supabase.auth.signOut();
+    if (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
 
-  if (error) {
+    return {
+      success: true,
+      message: 'Successfully logged out.'
+    };
+
+  } catch (error) {
+    console.error('Logout Error:', error);
+
     return {
       success: false,
-      message: error.message
+      message: 'Unable to log out.'
     };
   }
-
-  return {
-    success: true,
-    message: 'Successfully logged out.'
-  };
 };
 
 export const handleForgotPassword = async (
   email: string
 ): Promise<AuthResponse> => {
-
   try {
     if (!email.trim()) {
       return {
@@ -215,7 +242,7 @@ export const handleForgotPassword = async (
     };
 
   } catch (error) {
-    console.error('Password reset error:', error);
+    console.error('Password Reset Error:', error);
 
     return {
       success: false,
@@ -225,7 +252,6 @@ export const handleForgotPassword = async (
 };
 
 export const getCurrentUser = async () => {
-
   const { data, error } = await supabase.auth.getUser();
 
   if (error) {
@@ -236,7 +262,6 @@ export const getCurrentUser = async () => {
 };
 
 export const getUserProfile = async (): Promise<UserProfile | null> => {
-
   const { data: userData, error: userError } =
     await supabase.auth.getUser();
 
@@ -251,7 +276,7 @@ export const getUserProfile = async (): Promise<UserProfile | null> => {
     .single();
 
   if (error) {
-    console.error('Profile retrieval error:', error);
+    console.error('Profile Retrieval Error:', error);
     return null;
   }
 

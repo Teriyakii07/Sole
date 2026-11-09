@@ -39,6 +39,8 @@ export const LoginPage: React.FC = () => {
   // OTP states
   const [showOTP, setShowOTP] = useState(false);
   const [otpPhone, setOtpPhone] = useState('');
+  const [otpHash, setOtpHash] = useState('');
+  const [otpCreatedAt, setOtpCreatedAt] = useState<number>(0);
 
   // Forgot password states
   const [isForgotPassView, setIsForgotPassView] = useState(false);
@@ -106,7 +108,14 @@ export const LoginPage: React.FC = () => {
       }
 
       if (res.requiresOTP) {
+        const createdAt =
+          typeof res.createdAt === 'number'
+            ? res.createdAt
+            : Number(res.createdAt ?? Date.now());
+
         setOtpPhone(res.phone || '');
+        setOtpHash(res.otpHash || '');
+        setOtpCreatedAt(createdAt);
         setShowOTP(true);
       } else {
         navigate('/');
@@ -428,6 +437,8 @@ export const LoginPage: React.FC = () => {
         isOpen={showOTP}
         phone={otpPhone}
         purpose="2FA_LOGIN"
+        hash={otpHash}
+        createdAt={otpCreatedAt}
         onClose={() => setShowOTP(false)}
         onSuccess={() => {
           setShowOTP(false);

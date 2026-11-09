@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+
 import {
   ShieldCheck,
   LockKeyhole,
@@ -11,10 +12,15 @@ import {
 
 import { verifyPhilSMSOTP } from '../../../controllers/otpController';
 
+// Replace line 15 with:
+import type { OTPPayload } from '../../types/AuthTypes';
+
 interface OTPModalProps {
   isOpen: boolean;
   phone: string;
   purpose: 'REGISTRATION' | '2FA_LOGIN';
+  hash: string;
+  createdAt: number;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -23,6 +29,8 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   isOpen,
   phone,
   purpose,
+  hash,
+  createdAt,
   onClose,
   onSuccess
 }) => {
@@ -33,29 +41,27 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const title =
-    purpose === 'REGISTRATION' ? 'Verify Your Account' : 'Two-Step Verification';
+    purpose === 'REGISTRATION'
+      ? 'Verify Your Account'
+      : 'Two-Step Verification';
 
   const description =
     purpose === 'REGISTRATION'
       ? 'Enter the verification code to complete your registration.'
       : 'Enter the security code to continue signing in.';
 
-  // Reset the OTP fields whenever the modal opens
   useEffect(() => {
     if (isOpen) {
       setOtp(['', '', '', '', '', '']);
       setError('');
       setIsLoading(false);
 
-      setTimeout(() => {
-        inputRefs.current[0]?.focus();
-      }, 100);
+      inputRefs.current[0]?.focus();
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // Update one digit and focus the next box
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
 
@@ -63,7 +69,6 @@ export const OTPModal: React.FC<OTPModalProps> = ({
 
     const digits = [...otp];
 
-    // Support entering or pasting multiple digits
     if (value.length > 1) {
       const pastedDigits = value.replace(/\D/g, '').slice(0, 6);
 
@@ -74,12 +79,14 @@ export const OTPModal: React.FC<OTPModalProps> = ({
       setOtp(digits);
 
       const nextIndex = Math.min(pastedDigits.length, 5);
+
       inputRefs.current[nextIndex]?.focus();
 
       return;
     }
 
     digits[index] = value;
+
     setOtp(digits);
 
     if (value && index < 5) {
@@ -87,7 +94,6 @@ export const OTPModal: React.FC<OTPModalProps> = ({
     }
   };
 
-  // Handle keyboard navigation
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
     index: number
@@ -95,7 +101,9 @@ export const OTPModal: React.FC<OTPModalProps> = ({
     if (e.key === 'Backspace') {
       if (otp[index]) {
         const digits = [...otp];
+
         digits[index] = '';
+
         setOtp(digits);
         setError('');
       } else if (index > 0) {
@@ -112,8 +120,9 @@ export const OTPModal: React.FC<OTPModalProps> = ({
     }
   };
 
-  // Handle pasting a complete OTP
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePaste = (
+    e: React.ClipboardEvent<HTMLInputElement>
+  ) => {
     e.preventDefault();
 
     const pastedDigits = e.clipboardData
@@ -123,28 +132,44 @@ export const OTPModal: React.FC<OTPModalProps> = ({
 
     if (!pastedDigits) return;
 
-    const digits = Array.from({ length: 6 }, (_, index) =>
-      pastedDigits[index] || ''
+    const digits = Array.from(
+      { length: 6 },
+      (_, index) => pastedDigits[index] || ''
     );
 
     setOtp(digits);
     setError('');
 
-    inputRefs.current[Math.min(pastedDigits.length, 5)]?.focus();
+    inputRefs.current[
+      Math.min(pastedDigits.length, 5)
+    ]?.focus();
   };
 
-  // Verify OTP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setError('');
 
     const code = otp.join('');
 
     if (code.length !== 6) {
-      setError('Please enter all 6 digits of your verification code.');
+      setError(
+        'Please enter all 6 digits of your verification code.'
+      );
 
       const firstEmpty = otp.findIndex((digit) => !digit);
-      inputRefs.current[firstEmpty === -1 ? 0 : firstEmpty]?.focus();
+
+      inputRefs.current[
+        firstEmpty === -1 ? 0 : firstEmpty
+      ]?.focus();
+
+      return;
+    }
+
+    if (!hash || !createdAt) {
+      setError(
+        'Verification session is missing. Please request a new OTP.'
+      );
 
       return;
     }
@@ -152,40 +177,56 @@ export const OTPModal: React.FC<OTPModalProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await verifyPhilSMSOTP({
+      const payload: OTPPayload = {
         phone,
         code,
-        purpose
-      });
+        purpose,
+        hash,
+        createdAt
+      };
+
+      const res = await verifyPhilSMSOTP(payload);
 
       if (res.success) {
         onSuccess();
       } else {
         setError(
-          res.message || 'The verification code is incorrect. Please try again.'
+          res.message ||
+          'The verification code is incorrect. Please try again.'
         );
+
         setOtp(['', '', '', '', '', '']);
+
         inputRefs.current[0]?.focus();
       }
-    } catch {
+
+    } catch (error) {
+      console.error('OTP Verification Error:', error);
+
       setError(
         'Unable to verify your code right now. Please check your connection and try again.'
       );
+
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Mask phone number for privacy
-  const maskedPhone = phone.length > 4
-    ? `${phone.slice(0, 4)}${'*'.repeat(Math.max(0, phone.length - 6))}${phone.slice(-2)}`
-    : phone;
+  const maskedPhone =
+    phone.length > 4
+      ? `${phone.slice(0, 4)}${'*'.repeat(
+          Math.max(0, phone.length - 6)
+        )}${phone.slice(-2)}`
+      : phone;
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071936]/70 p-4 backdrop-blur-sm"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !isLoading) {
+        if (
+          e.target === e.currentTarget &&
+          !isLoading
+        ) {
           onClose();
         }
       }}
@@ -196,7 +237,6 @@ export const OTPModal: React.FC<OTPModalProps> = ({
         aria-labelledby="otp-title"
         className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200"
       >
-
         {/* Top accent */}
         <div className="h-1.5 w-full bg-[#D7192D]" />
 
@@ -222,9 +262,11 @@ export const OTPModal: React.FC<OTPModalProps> = ({
           <div className="text-center">
             <div className="mb-2 flex items-center justify-center gap-2">
               <span className="h-1 w-5 rounded-full bg-[#D7192D]" />
+
               <span className="text-[10px] font-bold tracking-[3px] text-[#123A8C]">
                 SOLE SECURITY
               </span>
+
               <span className="h-1 w-5 rounded-full bg-[#D7192D]" />
             </div>
 
@@ -250,6 +292,7 @@ export const OTPModal: React.FC<OTPModalProps> = ({
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Verification sent to
               </p>
+
               <p className="mt-0.5 text-sm font-bold text-[#123A8C]">
                 {maskedPhone}
               </p>
@@ -278,20 +321,27 @@ export const OTPModal: React.FC<OTPModalProps> = ({
                   id={`otp-input-${index}`}
                   type="text"
                   inputMode="numeric"
-                  autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                  autoComplete={
+                    index === 0 ? 'one-time-code' : 'off'
+                  }
                   maxLength={6}
                   value={digit}
                   disabled={isLoading}
-                  onChange={(e) => handleChange(e.target.value, index)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  onChange={(e) =>
+                    handleChange(e.target.value, index)
+                  }
+                  onKeyDown={(e) =>
+                    handleKeyDown(e, index)
+                  }
                   onPaste={handlePaste}
                   aria-label={`Verification digit ${index + 1}`}
                   className={`h-12 w-10 rounded-xl border text-center text-lg font-extrabold text-[#123A8C] outline-none transition-all sm:h-14 sm:w-12
-                    ${error
-                      ? 'border-red-400 bg-red-50 focus:border-red-500'
-                      : digit
-                        ? 'border-[#123A8C] bg-blue-50'
-                        : 'border-slate-200 bg-white focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
+                    ${
+                      error
+                        ? 'border-red-400 bg-red-50 focus:border-red-500'
+                        : digit
+                          ? 'border-[#123A8C] bg-blue-50'
+                          : 'border-slate-200 bg-white focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
                     }
                     disabled:opacity-60`}
                 />
@@ -301,10 +351,19 @@ export const OTPModal: React.FC<OTPModalProps> = ({
             {/* ERROR MESSAGE */}
             {error && (
               <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-left text-xs text-red-700">
-                <AlertCircle size={17} className="mt-0.5 shrink-0" />
+                <AlertCircle
+                  size={17}
+                  className="mt-0.5 shrink-0"
+                />
+
                 <div>
-                  <p className="font-bold">Verification failed</p>
-                  <p className="mt-1 leading-5">{error}</p>
+                  <p className="font-bold">
+                    Verification failed
+                  </p>
+
+                  <p className="mt-1 leading-5">
+                    {error}
+                  </p>
                 </div>
               </div>
             )}
