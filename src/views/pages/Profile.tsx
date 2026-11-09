@@ -1,7 +1,8 @@
-import { type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ProfileTab, useProfileController } from '../../controllers/profileControllers'
 import { formatPrice } from '../../models/Cart'
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
+import type { Profile as ProfileData, Address, AddressFormData } from '../../models/Profile';
 
 const inputClass = 'w-full min-w-0 rounded-lg border border-[#DDE1E7] bg-white px-3 py-3 text-xs outline-none focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
 const primaryClass = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-[#123A8C] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#0D2D70]'
@@ -37,6 +38,470 @@ function EmptyState({ icon, title, message, action }: { icon: string; title: str
   </div>
 }
 
+function PersonalInformation({
+  profile,
+  addresses,
+  savingProfile,
+  savingAddress,
+  message,
+  error,
+  saveProfile,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+}: {
+  profile: ProfileData;
+  addresses: Address[];
+  savingProfile: boolean;
+  savingAddress: boolean;
+  message: string;
+  error: string;
+  saveProfile: (profile: ProfileData) => Promise<void>;
+  addAddress: (address: AddressFormData) => Promise<boolean>;
+  updateAddress: (id: string, address: AddressFormData) => Promise<boolean>;
+  deleteAddress: (id: string) => Promise<void>;
+  setDefaultAddress: (id: string) => Promise<void>;
+}) {
+  const [personalDraft, setPersonalDraft] = useState(profile);
+  const [editingPersonal, setEditingPersonal] = useState(false);
+
+  const [addressDraft, setAddressDraft] = useState<AddressFormData>({
+    recipient_name: '',
+    phone_number: '',
+    address_line: '',
+    address_line_2: '',
+    barangay: '',
+    city: '',
+    province: '',
+    postal_code: '',
+    country: 'Philippines',
+    is_default: false,
+  });
+
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+
+  useEffect(() => {
+    setPersonalDraft(profile);
+  }, [profile]);
+
+  function updatePersonalField(
+    field: keyof ProfileData,
+    value: string
+  ) {
+    setPersonalDraft(previous => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  function updateAddressField(
+    field: keyof AddressFormData,
+    value: string | boolean
+  ) {
+    setAddressDraft(previous => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  async function handlePersonalSave(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await saveProfile(personalDraft);
+    setEditingPersonal(false);
+  }
+
+  function startAddAddress() {
+    setAddressDraft({
+      recipient_name: '',
+      phone_number: '',
+      address_line: '',
+      address_line_2: '',
+      barangay: '',
+      city: '',
+      province: '',
+      postal_code: '',
+      country: 'Philippines',
+      is_default: addresses.length === 0,
+    });
+
+    setEditingAddressId(null);
+    setShowAddressForm(true);
+  }
+
+  function startEditAddress(address: Address) {
+    setAddressDraft({
+      recipient_name: address.recipient_name,
+      phone_number: address.phone_number,
+      address_line: address.address_line,
+      address_line_2: address.address_line_2 ?? '',
+      barangay: address.barangay,
+      city: address.city,
+      province: address.province,
+      postal_code: address.postal_code,
+      country: address.country,
+      is_default: address.is_default,
+    });
+
+    setEditingAddressId(address.id);
+    setShowAddressForm(true);
+  }
+
+  async function handleAddressSave(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const requiredFields: (keyof AddressFormData)[] = [
+      'recipient_name',
+      'phone_number',
+      'address_line',
+      'barangay',
+      'city',
+      'province',
+      'postal_code',
+      'country',
+    ];
+
+    const missingField = requiredFields.some(field => {
+      const value = addressDraft[field];
+      return typeof value !== 'string' || !value.trim();
+    });
+
+    if (missingField) {
+      alert('Please complete all required address fields.');
+      return;
+    }
+
+    let success: boolean;
+
+    if (editingAddressId) {
+      success = await updateAddress(editingAddressId, addressDraft);
+    } else {
+      success = await addAddress(addressDraft);
+    }
+
+    if (success) {
+      setShowAddressForm(false);
+      setEditingAddressId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-9">
+
+      {/* Personal information */}
+      <section>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[13px] font-bold text-[#123A8C]">
+              Personal Information
+            </h3>
+            <p className="mt-1 text-xs text-[#666]">
+              Manage your name and account contact details.
+            </p>
+          </div>
+
+          {!editingPersonal && (
+            <button
+              type="button"
+              onClick={() => setEditingPersonal(true)}
+              className="rounded-lg border border-[#123A8C] px-4 py-2 text-xs font-bold text-[#123A8C] hover:bg-[#EEF3FC]"
+            >
+              Edit Information
+            </button>
+          )}
+        </div>
+
+        <form onSubmit={handlePersonalSave}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-xs font-bold">
+                First Name
+              </label>
+              <input
+                className={inputClass}
+                value={personalDraft.first_name}
+                onChange={e =>
+                  updatePersonalField('first_name', e.target.value)
+                }
+                disabled={!editingPersonal}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold">
+                Last Name
+              </label>
+              <input
+                className={inputClass}
+                value={personalDraft.last_name}
+                onChange={e =>
+                  updatePersonalField('last_name', e.target.value)
+                }
+                disabled={!editingPersonal}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold">
+                Email Address
+              </label>
+              <input
+                type="email"
+                className={inputClass}
+                value={personalDraft.email}
+                onChange={e =>
+                  updatePersonalField('email', e.target.value)
+                }
+                disabled={!editingPersonal}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-bold">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                className={inputClass}
+                value={personalDraft.phone_number}
+                onChange={e =>
+                  updatePersonalField('phone_number', e.target.value)
+                }
+                disabled={!editingPersonal}
+                placeholder="09XXXXXXXXX"
+                required
+              />
+            </div>
+          </div>
+
+          {editingPersonal && (
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPersonalDraft(profile);
+                  setEditingPersonal(false);
+                }}
+                className="rounded-lg border border-[#DDE1E7] px-5 py-3 text-xs font-bold"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className={primaryClass}
+              >
+                {savingProfile ? 'Saving...' : 'Save Information'}
+              </button>
+            </div>
+          )}
+        </form>
+      </section>
+
+      <div className="border-t border-[#E5E7EB]" />
+
+      {/* Delivery addresses */}
+      <section>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[13px] font-bold text-[#123A8C]">
+              Delivery Addresses
+            </h3>
+            <p className="mt-1 text-xs text-[#666]">
+              Manage the addresses where you receive your orders.
+            </p>
+          </div>
+
+          {!showAddressForm && (
+            <button
+              type="button"
+              onClick={startAddAddress}
+              className={primaryClass}
+            >
+              + Add Address
+            </button>
+          )}
+        </div>
+
+        {showAddressForm && (
+          <form
+            onSubmit={handleAddressSave}
+            className="mb-6 rounded-xl border border-[#DDE1E7] bg-[#F9FAFC] p-4 sm:p-5"
+          >
+            <h4 className="mb-5 text-sm font-bold">
+              {editingAddressId ? 'Edit Address' : 'Add New Address'}
+            </h4>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+
+              {([
+                ['recipient_name', 'Recipient Name', 'Full name of recipient'],
+                ['phone_number', 'Recipient Phone Number', '09XXXXXXXXX'],
+                ['address_line', 'House Number / Building / Street', 'House number, building, street'],
+                ['address_line_2', 'Additional Address Details (Optional)', 'Apartment, unit, landmark'],
+                ['barangay', 'Barangay', 'Enter barangay'],
+                ['city', 'City / Municipality', 'Enter city or municipality'],
+                ['province', 'Province', 'Enter province'],
+                ['postal_code', 'Postal Code', 'Enter postal code'],
+                ['country', 'Country', 'Enter country'],
+              ] as const).map(([field, label, placeholder]) => (
+                <div
+                  key={field}
+                  className={field === 'address_line' || field === 'address_line_2'
+                    ? 'sm:col-span-2'
+                    : ''}
+                >
+                  <label className="mb-2 block text-xs font-bold">
+                    {label}
+                    {field === 'address_line_2' && (
+                      <span className="ml-1 font-normal text-[#888]">
+                        Optional
+                      </span>
+                    )}
+                  </label>
+
+                  <input
+                    className={inputClass}
+                    value={addressDraft[field]}
+                    onChange={e =>
+                      updateAddressField(field, e.target.value)
+                    }
+                    placeholder={placeholder}
+                    required={field !== 'address_line_2'}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <label className="mt-5 flex items-center gap-2 text-xs font-semibold">
+              <input
+                type="checkbox"
+                checked={addressDraft.is_default}
+                onChange={e =>
+                  updateAddressField('is_default', e.target.checked)
+                }
+                className="h-4 w-4 accent-[#123A8C]"
+              />
+              Set as my default delivery address
+            </label>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAddressForm(false)}
+                className="rounded-lg border border-[#DDE1E7] px-5 py-3 text-xs font-bold"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={savingAddress}
+                className={primaryClass}
+              >
+                {savingAddress ? 'Saving...' : 'Save Address'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {addresses.length === 0 && !showAddressForm && (
+          <div className="rounded-xl border border-dashed border-[#DDE1E7] px-4 py-10 text-center">
+            <p className="text-sm font-bold">No delivery addresses yet</p>
+            <p className="mt-2 text-xs text-[#666]">
+              Add an address to make checkout easier.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {addresses.map(address => (
+            <article
+              key={address.id}
+              className="rounded-xl border border-[#E5E7EB] p-4 sm:p-5"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="break-words text-sm font-bold">
+                      {address.recipient_name}
+                    </h4>
+
+                    {address.is_default && (
+                      <span className="rounded-full bg-[#EEF3FC] px-3 py-1 text-[10px] font-bold text-[#123A8C]">
+                        DEFAULT
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-xs text-[#555]">
+                    {address.phone_number}
+                  </p>
+
+                  <p className="mt-2 break-words text-xs leading-6 text-[#666]">
+                    {address.address_line}
+                    {address.address_line_2 && `, ${address.address_line_2}`}
+                    {`, Barangay ${address.barangay}, ${address.city}, ${address.province}, ${address.postal_code}, ${address.country}`}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEditAddress(address)}
+                    className="rounded-lg border border-[#DDE1E7] px-3 py-2 text-xs font-bold hover:bg-gray-50"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Delete this delivery address?')) {
+                        void deleteAddress(address.id);
+                      }
+                    }}
+                    className="rounded-lg border border-[#F2C8CC] px-3 py-2 text-xs font-bold text-[#D7192D] hover:bg-[#FFF0F1]"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {!address.is_default && (
+                <button
+                  type="button"
+                  onClick={() => void setDefaultAddress(address.id)}
+                  className="mt-4 text-xs font-bold text-[#123A8C] hover:underline"
+                >
+                  Set as Default Address
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {message && (
+        <p role="status" className="rounded-lg bg-[#ECF8F0] p-3 text-xs text-[#176534]">
+          {message}
+        </p>
+      )}
+
+      {error && (
+        <p role="alert" className="rounded-lg bg-[#FFF0F1] p-3 text-xs text-[#B42332]">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function Profile() {
   const c = useProfileController()
   const count: Record<ProfileTab, number | null> = {
@@ -49,10 +514,7 @@ export default function Profile() {
     orders: 'View your previous purchases and order status.',
     cart: 'Review the sneakers you are planning to buy.',
   }
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    c.saveProfile()
-  }
+
 
   return <main className="min-h-[75vh] bg-[#F3F4F6] py-8 text-[#111] sm:py-12">
     <div className="mx-auto w-[92%] max-w-[1180px]">
@@ -66,7 +528,7 @@ export default function Profile() {
         <aside className="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm lg:p-5">
           <div className="flex min-w-0 items-center gap-3 border-b border-gray-200 px-1 pb-5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#123A8C] text-white"><Icon name="user" size={24}/></div>
-            <div className="min-w-0"><h2 className="break-words text-sm font-bold">{c.profile.name || 'Welcome!'}</h2><p className="break-words text-[11px] text-[#666]">{c.profile.email || 'Your SOLE. account'}</p></div>
+            <div className="min-w-0"><h2 className="break-words text-sm font-bold">{`${c.profile.first_name} ${c.profile.last_name}`.trim() || 'Welcome!'}</h2><p className="break-words text-[11px] text-[#666]">{c.profile.email || 'Your SOLE. account'}</p></div>
           </div>
           <p className="mb-3 mt-6 px-2 text-[10px] font-extrabold tracking-[1.4px] text-[#888]">ACCOUNT MENU</p>
           <nav className="grid grid-cols-2 gap-2 md:flex md:flex-col" aria-label="Account menu">
@@ -82,34 +544,65 @@ export default function Profile() {
           </div>
         </aside>
 
-        <section className="min-h-[470px] min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-6 lg:p-[30px]">
-          {c.saved && c.tab === 'personal' && <div role="status" className="mb-5 flex items-center gap-2 rounded-lg border border-[#CDEBD6] bg-[#ECF8F0] p-3 text-xs font-semibold text-[#176534]"><Icon name="check" size={18}/>Your personal information has been updated.</div>}
-          <div className="mb-6 flex items-center gap-3 border-b border-[#E5E7EB] pb-6">
-            <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[13px] ${c.tab === 'favorites' ? 'bg-[#FFF0F1] text-[#D7192D]' : 'bg-[#EEF3FC] text-[#123A8C]'}`}><Icon name={active.icon}/></div>
-            <div className="min-w-0"><h2 className="font-montserrat text-lg font-bold">{active.label}</h2><p className="mt-1 text-xs text-[#666]">{descriptions[c.tab]}</p></div>
-          </div>
+<section className="min-h-[470px] min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-6 lg:p-[30px]">
 
-          {c.tab === 'personal' && <form onSubmit={submit}>
-            <h3 className="mb-5 flex items-center gap-2 text-[13px] font-bold text-[#123A8C]"><Icon name="user" size={18}/>Basic Details</h3>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div><label htmlFor="profile-name" className="mb-2 block text-xs font-bold">Full Name</label><input id="profile-name" className={inputClass} value={c.draft.name} onChange={e => c.changeField('name', e.target.value)} placeholder="Enter your full name" autoComplete="name" required /></div>
-              <div><label htmlFor="profile-email" className="mb-2 block text-xs font-bold">Email Address</label><input id="profile-email" type="email" className={inputClass} value={c.draft.email} onChange={e => c.changeField('email', e.target.value)} placeholder="Enter your email" autoComplete="email" required /></div>
-              <div className="sm:col-span-2"><label htmlFor="profile-phone" className="mb-2 block text-xs font-bold">Phone Number</label><input id="profile-phone" type="tel" className={inputClass} value={c.draft.phone} onChange={e => c.changeField('phone', e.target.value)} placeholder="Enter your phone number" autoComplete="tel" /></div>
-            </div>
-            <h3 className="mb-5 mt-8 flex items-center gap-2 text-[13px] font-bold text-[#123A8C]"><Icon name="pin" size={18}/>Delivery Address</h3>
-            <label htmlFor="profile-address" className="mb-2 block text-xs font-bold">Complete Address</label>
-            <textarea id="profile-address" rows={4} className={`${inputClass} resize-y`} value={c.draft.address} onChange={e => c.changeField('address', e.target.value)} placeholder="House number, street, barangay, city, and province" autoComplete="street-address" />
-            <div className="mt-7 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-6">
-              <button type="button" onClick={c.resetProfile} className="min-h-11 rounded-lg border border-[#DDE1E7] px-5 text-xs font-bold text-[#444] hover:bg-gray-50">Reset Changes</button>
-              <button type="submit" className={`${primaryClass} gap-2`}><Icon name="save" size={16}/>Save Changes</button>
-            </div>
-          </form>}
+  {c.loading ? (
+    <div className="flex min-h-[300px] items-center justify-center text-sm text-[#666]">
+      Loading your profile...
+    </div>
+  ) : (
+    <>
+      {c.saved && c.tab === 'personal' && (
+        <div
+          role="status"
+          className="mb-5 flex items-center gap-2 rounded-lg border border-[#CDEBD6] bg-[#ECF8F0] p-3 text-xs font-semibold text-[#176534]"
+        >
+          <Icon name="check" size={18} />
+          Your personal information has been updated.
+        </div>
+      )}
 
+      {/* TAB HEADING */}
+      <div className="mb-6 flex items-center gap-3 border-b border-[#E5E7EB] pb-6">
+        <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[13px] bg-[#EEF3FC] text-[#123A8C]">
+          <Icon name={active.icon} />
+        </div>
+
+        <div className="min-w-0">
+          <h2 className="font-montserrat text-lg font-bold">
+            {active.label}
+          </h2>
+          <p className="mt-1 text-xs text-[#666]">
+            {descriptions[c.tab]}
+          </p>
+        </div>
+      </div>
+
+      {/* PERSONAL INFORMATION */}
+      {c.tab === 'personal' && (
+        <PersonalInformation
+          profile={c.profile}
+          addresses={c.addresses}
+          savingProfile={c.savingProfile}
+          savingAddress={c.savingAddress}
+          message={c.message}
+          error={c.error}
+          saveProfile={c.saveProfile}
+          addAddress={c.addAddress}
+          updateAddress={c.updateAddress}
+          deleteAddress={c.deleteAddress}
+          setDefaultAddress={c.setDefaultAddress}
+        />
+      )}
+
+{/* favorites */}
           {c.tab === 'favorites' && (c.favorites.length === 0 ? <EmptyState icon="heart" title="No favorites yet" message="Save the sneakers you love so you can find them easily later." action="Explore Sneakers"/> : <div className="grid grid-cols-2 gap-3 sm:gap-5">{c.favorites.map(f => <article key={f.id} className="overflow-hidden rounded-xl border border-gray-200"><div className="flex h-[130px] items-center justify-center bg-[#F7F8FA] p-3 sm:h-[175px]">{f.image ? <img src={f.image} alt={f.name} className="h-full w-full object-contain"/> : <Icon name="bag" size={35}/>}</div><div className="p-3"><h3 className="break-words text-xs font-bold">{f.name}</h3><p className="mt-2 text-sm font-extrabold text-[#D7192D]">{formatPrice(f.price)}</p><button type="button" onClick={() => c.removeFavorite(f.id)} className="mt-4 w-full rounded-lg bg-[#FFF0F1] py-3 text-xs font-bold text-[#D7192D] hover:bg-[#FFE1E4]">Remove</button></div></article>)}</div>)}
-
+{/* orders */}
           {c.tab === 'orders' && (c.orders.length === 0 ? <EmptyState icon="package" title="No orders yet" message="Your completed and ongoing orders will appear here." action="Start Shopping"/> : <div className="space-y-3">{c.orders.map(o => <article key={o.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 p-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FC] text-[#123A8C]"><Icon name="package"/></div><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-bold">Order #{o.id}</h3><p className="mt-1 text-xs text-[#666]">Date: {o.date}</p><p className="mt-1 text-xs font-bold">Total: {formatPrice(o.total)}</p></div><span className="rounded-full bg-[#EAF6EE] px-3 py-2 text-[10px] font-bold text-[#247440]">{o.status || 'Processing'}</span></article>)}</div>)}
-
+{/* cart */}
           {c.tab === 'cart' && (c.cart.length === 0 ? <EmptyState icon="bag" title="Your cart is empty" message="Find your next favorite pair and add it to your cart." action="Browse Sneakers"/> : <><div className="space-y-3">{c.cart.map(item => <article key={item.id} className="flex min-w-0 items-center gap-4 rounded-xl border border-gray-200 p-3"><img src={item.image} alt={item.name} className="h-[70px] w-[70px] shrink-0 rounded-lg bg-[#F7F8FA] object-contain sm:h-[85px] sm:w-[85px]"/><div className="min-w-0"><h3 className="break-words text-[13px] font-bold">{item.name}</h3><p className="mt-1 text-xs text-[#666]">Quantity: {item.quantity}</p><strong className="mt-1 block text-[13px] text-[#D7192D]">{formatPrice(item.price * item.quantity)}</strong></div></article>)}</div><div className="mt-6 flex items-center justify-between gap-3 border-t border-gray-200 pt-5"><span className="text-sm text-[#666]">Estimated Total</span><strong className="font-montserrat text-xl text-[#D7192D]">{formatPrice(c.subtotal)}</strong></div><Link to="/cart" className={`${primaryClass} mt-5 flex w-full gap-2`}>View Full Cart <Icon name="arrow" size={17}/></Link></>)}
+          </>
+  )}
         </section>
       </div>
     </div>
