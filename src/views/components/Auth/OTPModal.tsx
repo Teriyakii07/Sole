@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
@@ -11,14 +10,12 @@ import {
 } from 'lucide-react';
 
 import { verifyPhilSMSOTP } from '../../../controllers/otpController';
-
-// Replace line 15 with:
 import type { OTPPayload } from '../../types/AuthTypes';
 
 interface OTPModalProps {
   isOpen: boolean;
   phone: string;
-  purpose: 'REGISTRATION' | '2FA_LOGIN';
+  purpose: 'REGISTRATION' | '2FA_LOGIN' | 'registration' | '2fa_login' | 'login';
   hash: string;
   createdAt: number;
   onClose: () => void;
@@ -40,13 +37,15 @@ export const OTPModal: React.FC<OTPModalProps> = ({
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const normalizedPurpose = purpose.toLowerCase();
+
   const title =
-    purpose === 'REGISTRATION'
+    normalizedPurpose === 'registration'
       ? 'Verify Your Account'
       : 'Two-Step Verification';
 
   const description =
-    purpose === 'REGISTRATION'
+    normalizedPurpose === 'registration'
       ? 'Enter the verification code to complete your registration.'
       : 'Enter the security code to continue signing in.';
 
@@ -177,10 +176,11 @@ export const OTPModal: React.FC<OTPModalProps> = ({
     setIsLoading(true);
 
     try {
+      // Safely convert purpose to lowercase to pass backend validation
       const payload: OTPPayload = {
         phone,
         code,
-        purpose,
+        purpose: purpose.toLowerCase() as OTPPayload['purpose'],
         hash,
         createdAt
       };

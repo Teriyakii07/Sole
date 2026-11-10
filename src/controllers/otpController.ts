@@ -1,137 +1,96 @@
+import type { OTPPayload, AuthResponse, OTPPurpose } from '../views/types/AuthTypes';
 
-import { supabase } from '../lib/supabaseClient';
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000';
 
-export type OTPPurpose =
-  | 'REGISTRATION'
-  | '2FA_LOGIN';
-
-export interface OTPPayload {
-  phone: string;
-  code: string;
-  hash: string;
-  purpose: OTPPurpose;
-  createdAt?: number;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  message?: string;
-  requiresOTP?: boolean;
-  phone?: string;
-  otpHash?: string;
-  createdAt?: number;
-}
-
-const FUNCTION_NAME = 'otp';
-
+// Standardizes any PH phone number format (+639..., 09..., 639...) to 639XXXXXXXXX
 function normalizePhone(phone: string): string {
-  return phone.replace(/[\s()-]/g, '');
-}
-
-function validPhone(phone: string): boolean {
-  return /^(\+639\d{9}|09\d{9})$/.test(phone);
-}
-
-async function getErrorMessage(error: {
-  message: string;
-  context?: unknown;
-}): Promise<string> {
-  if (error.context instanceof Response) {
-    try {
-      const result = await error.context.clone().json();
-
-      if (typeof result?.message === 'string') {
-        return result.message;
-      }
-    } catch {
-      // Use fallback message.
-    }
-
-    return `OTP server error (${error.context.status}).`;
+  if (!phone) return '';
+  let cleaned = phone.replace(/[\s()-]/g, '');
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.slice(1);
   }
-
-  return error.message || 'Unable to contact OTP service.';
+  if (cleaned.startsWith('09') && cleaned.length === 11) {
+    cleaned = `639${cleaned.slice(2)}`;
+  }
+  return cleaned;
 }
 
-// SEND OTP
+// Validates against standard Philippine mobile formats
+function validPhone(phone: string): boolean {
+  const cleaned = phone.replace(/[\s()-]/g, '');
+  return /^(639\d{9}|09\d{9}|\+639\d{9})$/.test(cleaned);
+}
+
+// SEND PhilSMS OTP
 export const sendPhilSMSOTP = async (
   phone: string,
-  purpose: OTPPurpose
+  purpose: OTPPurpose | string
 ): Promise<AuthResponse> => {
   try {
-    const normalizedPhone = normalizePhone(phone);
+    const rawPhone = (phone || '').trim();
+    const normalizedPurpose = purpose ? purpose.toString().trim().toLowerCase() : '2fa_login';
 
-    if (!validPhone(normalizedPhone)) {
+    if (!validPhone(rawPhone)) {
       return {
         success: false,
         message: 'Please enter a valid Philippine phone number.',
       };
     }
 
-    const { data, error } = await supabase.functions.invoke(
-      FUNCTION_NAME,
-      {
-        body: {
-          action: 'send',
-          phone: normalizedPhone,
-          purpose,
-        },
-      }
-    );
+    // Always normalize to 639XXXXXXXXX format for consistent backend API payloads
+    const normalizedPhone = normalizePhone(rawPhone);
 
-    if (error) {
-      console.error('OTP Send Error:', error);
+    console.log('Sending payload to backend:', {
+      phone: normalizedPhone,
+      purpose: normalizedPurpose
+    });
 
+    const response = await fetch(`${API_BASE_URL}/api/otp/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: normalizedPhone,
+        purpose: normalizedPurpose,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
       return {
         success: false,
-        message: await getErrorMessage(error),
-      };
-    }
-
-    const result = data as AuthResponse;
-
-    if (
-      !result?.success ||
-      !result.otpHash ||
-      typeof result.createdAt !== 'number'
-    ) {
-      return {
-        success: false,
-        message: result?.message || 'Unable to send OTP.',
+        message: data.message || 'Unable to send OTP via PhilSMS.',
       };
     }
 
     return {
       success: true,
       requiresOTP: true,
-      message: result.message,
+      message: data.message || 'Verification code sent via PhilSMS.',
       phone: normalizedPhone,
-      otpHash: result.otpHash,
-      createdAt: result.createdAt,
+      otpHash: data.otpHash,
+      createdAt: data.createdAt,
     };
-
   } catch (error) {
-    console.error('OTP Send Exception:', error);
-
+    console.error('OTP Send Error:', error);
     return {
       success: false,
-      message: 'Unexpected error while sending OTP.',
+      message: 'Network error while requesting PhilSMS OTP.',
     };
   }
 };
 
-// VERIFY OTP
+// VERIFY PhilSMS OTP
 export const verifyPhilSMSOTP = async (
   payload: OTPPayload
 ): Promise<AuthResponse> => {
   try {
     const normalizedPhone = normalizePhone(payload.phone);
+    const normalizedPurpose = payload.purpose ? payload.purpose.toString().trim().toLowerCase() : '';
 
-    if (
-      !validPhone(normalizedPhone) ||
-      !payload.hash ||
-      !payload.purpose
-    ) {
+    if (!validPhone(normalizedPhone) || !payload.hash || !normalizedPurpose) {
       return {
         success: false,
         message: 'Missing OTP verification information.',
@@ -145,49 +104,38 @@ export const verifyPhilSMSOTP = async (
       };
     }
 
-    const { data, error } = await supabase.functions.invoke(
-      FUNCTION_NAME,
-      {
-        body: {
-          action: 'verify',
-          phone: normalizedPhone,
-          code: payload.code,
-          purpose: payload.purpose,
-          hash: payload.hash,
-        },
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/otp/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: normalizedPhone,
+        code: payload.code.trim(),
+        purpose: normalizedPurpose,
+        hash: payload.hash,
+      }),
+    });
 
-    if (error) {
-      console.error('OTP Verify Error:', error);
+    const data = await response.json();
 
+    if (!response.ok || !data.success) {
       return {
         success: false,
-        message: await getErrorMessage(error),
-      };
-    }
-
-    const result = data as AuthResponse;
-
-    if (!result?.success) {
-      return {
-        success: false,
-        message: result?.message || 'Invalid OTP code.',
+        message: data.message || 'Invalid or expired OTP code.',
       };
     }
 
     return {
       success: true,
-      message: result.message || 'OTP verified successfully.',
-      phone: result.phone,
+      message: data.message || 'Phone number verified successfully.',
+      phone: normalizedPhone,
     };
-
   } catch (error) {
-    console.error('OTP Verify Exception:', error);
-
+    console.error('OTP Verify Error:', error);
     return {
       success: false,
-      message: 'Unexpected error during OTP verification.',
+      message: 'Network error during OTP verification.',
     };
   }
 };

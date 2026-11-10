@@ -11,6 +11,7 @@ import {
 import { handleSignUp } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
+import { sendPhilSMSOTP } from "../../controllers/otpController";
 
 
 interface FormErrors {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,7 +10,11 @@ import {
   Loader2
 } from 'lucide-react';
 
-import { handleLogin } from '../../controllers/authController';
+import {
+  handleLogin,
+  completeLogin,
+  cancelPendingLogin
+} from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
 
@@ -56,21 +59,24 @@ export const LoginPage: React.FC = () => {
   const validateLogin = (): boolean => {
     const newErrors: LoginErrors = {};
 
-    const username = credentials.usernameOrEmail.trim();
+    const inputVal = credentials.usernameOrEmail.trim();
     const password = credentials.password;
 
-    if (!username) {
-      newErrors.usernameOrEmail =
-        'Please enter your username or email address.';
-    } else if (
-      username.includes('@') &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)
-    ) {
-      newErrors.usernameOrEmail =
-        'Please enter a valid email address, such as name@example.com.';
-    } else if (!username.includes('@') && username.length < 3) {
-      newErrors.usernameOrEmail =
-        'Your username must contain at least 3 characters.';
+    if (!inputVal) {
+      newErrors.usernameOrEmail = 'Please enter your email, phone number, or username.';
+    } else if (inputVal.includes('@')) {
+      // Validate Email Format
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputVal)) {
+        newErrors.usernameOrEmail = 'Please enter a valid email address, such as name@example.com.';
+      }
+    } else if (/^[\d+\s()-]+$/.test(inputVal)) {
+      // Validate Phone Format (Accepts 09..., 639..., +639...)
+      const cleaned = inputVal.replace(/[\s()-]/g, '');
+      if (!/^(\+639\d{9}|639\d{9}|09\d{9})$/.test(cleaned)) {
+        newErrors.usernameOrEmail = 'Please enter a valid Philippine mobile number (e.g., 09123456789).';
+      }
+    } else if (inputVal.length < 3) {
+      newErrors.usernameOrEmail = 'Your username must contain at least 3 characters.';
     }
 
     if (!password) {
@@ -294,10 +300,10 @@ export const LoginPage: React.FC = () => {
             className="space-y-5"
             noValidate
           >
-            {/* USERNAME / EMAIL */}
+            {/* USERNAME / EMAIL / PHONE */}
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
-                Username or Email
+                Email or Phone Number
               </label>
 
               <div className="relative">
@@ -322,7 +328,7 @@ export const LoginPage: React.FC = () => {
                       general: undefined
                     }));
                   }}
-                  placeholder="Enter your username or email"
+                  placeholder="Enter email or phone number"
                   className={inputClass(!!errors.usernameOrEmail)}
                 />
               </div>
@@ -436,13 +442,22 @@ export const LoginPage: React.FC = () => {
       <OTPModal
         isOpen={showOTP}
         phone={otpPhone}
-        purpose="2FA_LOGIN"
+        purpose="login"
         hash={otpHash}
         createdAt={otpCreatedAt}
-        onClose={() => setShowOTP(false)}
-        onSuccess={() => {
+        onClose={() => {
+          cancelPendingLogin();
           setShowOTP(false);
-          navigate('/');
+        }}
+        onSuccess={async () => {
+          const result = await completeLogin();
+          setShowOTP(false);
+
+          if (result.success) {
+            navigate('/');
+          } else {
+            setErrors({ general: result.message });
+          }
         }}
       />
     </AuthLayout>
