@@ -15,7 +15,6 @@ import { SignUpPage } from './views/pages/Signup'
 
 // Jett: ADDED Import Product Catalog Details Page
 import ProductCatalog from './views/pages/ProductCatalog'
-import SearchPage from './views/pages/Searchpage'
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -50,7 +49,6 @@ function MainLayout() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/faqs" element={<FAQPage />} />
 
-        <Route path="/search" element={<SearchPage />} />
         <Route path="/product/:id" element={<ProductCatalog />} />
 
         <Route path="/login" element={<LoginPage />} />

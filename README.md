@@ -106,13 +106,13 @@ pnpm install tailwindcss @tailwindcss/vit
 pnpm add react-router-dom lucide-react
 ```
 
-#### 7. Install React
+#### 8. Install React
 ```bash
 pnpm add react react-dom
 pnpm add -D @types/react @types/react-dom
 ```
 
-#### 9. Connection to Database
+#### 10. Connection to Database
 ```bash
 pnpm add @supabase/supabase-js
 ```

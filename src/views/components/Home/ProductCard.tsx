@@ -5,7 +5,7 @@ import type { Product } from '../../../models/Product'
 interface ProductCardProps {
   product: Product
   isFavorite: boolean
-  onToggleFavorite: (id: number) => void
+  onToggleFavorite: (id: string | number) => void
   onAddToCart: (product: Product) => void
 }
 
@@ -28,12 +28,18 @@ export default function ProductCard({
       className="cursor-pointer overflow-hidden rounded-xl border border-gray-100 bg-white transition-all hover:shadow-md"
     >
       <div className="relative flex h-[100px] items-center justify-center bg-[#f4f4f4] sm:h-[115px]">
+
         <img
           src={product.image}
           alt={product.name}
           className="h-full w-full object-contain p-2"
           loading="lazy"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = '/images/product-placeholder.png';
+          }}
         />
+
 
         {/* Jett: Favorite Button: e.stopPropagation() prevents triggering handleCardClick */}
         <button

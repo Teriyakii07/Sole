@@ -12,7 +12,7 @@ import {
 import AdminSidebar, {
   type AdminTab,
 } from '../components/Admin/AdminSidebar'
-
+import ProductManagement from '../components/Admin/ProductManagement';
 import { useAdminController } from '../../controllers/adminController'
 
 export default function AdminDashboard() {
@@ -24,6 +24,22 @@ export default function AdminDashboard() {
     salesStatus,
     products,
     orders,
+
+    productList,
+    brands,
+    categories,
+    isLoadingProducts,
+    isSavingProduct,
+    productError,
+    productMessage,
+
+    createProduct,
+    updateProduct,
+    addProductVariant,
+    updateProductVariant,
+    deleteProduct,
+    createBrand,
+    createCategory,
   } = useAdminController()
 
   const statIcons = [
@@ -305,29 +321,46 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </>
-          ) : (
-            /* Other Tabs */
-            <div className="rounded-xl border border-gray-100 bg-white p-8 shadow-sm">
-              <h1 className="text-2xl font-bold text-[#123A8C]">
-                {activeTab}
-                <span className="text-[#D7192D]">.</span>
-              </h1>
+         ) : activeTab === 'Products' ? (
+          <ProductManagement
+            products={productList}
+            brands={brands}
+            categories={categories}
+            loading={isLoadingProducts}
+            saving={isSavingProduct}
+            error={productError}
+            message={productMessage}
+            onCreate={createProduct}
+            onUpdate={updateProduct}
+            onAddVariant={addProductVariant}
+            onUpdateVariant={updateProductVariant}
+            onDelete={deleteProduct}
+            onCreateBrand={createBrand}
+            onCreateCategory={createCategory}
+          />
+        ) : (
+          /* Other Tabs */
+          <div className="rounded-xl border border-gray-100 bg-white p-8 shadow-sm">
+            <h1 className="text-2xl font-bold text-[#123A8C]">
+              {activeTab}
+              <span className="text-[#D7192D]">.</span>
+            </h1>
 
-              <p className="mt-2 text-gray-500">
-                Manage your store's {activeTab.toLowerCase()} here.
+            <p className="mt-2 text-gray-500">
+              Manage your store's {activeTab.toLowerCase()} here.
+            </p>
+
+            <div className="mt-8 rounded-lg bg-[#F5F6F8] p-6 text-center">
+              <p className="font-semibold text-[#123A8C]">
+                {activeTab} Section
               </p>
 
-              <div className="mt-8 rounded-lg bg-[#F5F6F8] p-6 text-center">
-                <p className="font-semibold text-[#123A8C]">
-                  {activeTab} Section
-                </p>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  This section is ready for its content and functionality.
-                </p>
-              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                This section is ready for its content and functionality.
+              </p>
             </div>
-          )}
+          </div>
+        )}
 
         </div>
 
