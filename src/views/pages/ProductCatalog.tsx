@@ -1,104 +1,206 @@
-// src/views/pages/ProductCatalog.tsx
-import { useParams, useNavigate } from 'react-router-dom'
-import { Heart, ShoppingBag } from 'lucide-react'
-import { getProductById } from '../../controllers/productControllers'
+
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Heart, ShoppingBag } from 'lucide-react';
+
+import { getProductById } from '../../controllers/productControllers';
+import type { Product } from '../../models/Product';
 
 export default function ProductCatalog() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
-  // Fetch product data through the Controller
-  const product = getProductById(Number(id)) || getProductById(1) // Fallback to id 1 for testing
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  if (!product) {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProduct() {
+      setLoading(true);
+      setError('');
+
+      try {
+        if (!id) {
+          setProduct(null);
+          return;
+        }
+
+        const result = await getProductById(id);
+
+        if (isMounted) {
+          setProduct(result);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Unable to load product.'
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProduct();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (loading) {
     return (
       <main className="mx-auto max-w-6xl px-6 py-16 text-center">
-        <h2 className="text-2xl font-bold text-slate-700">Product Not Found</h2>
+        <p className="text-slate-500">Loading product details...</p>
+      </main>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <main className="mx-auto max-w-6xl px-6 py-16 text-center">
+        <h2 className="text-2xl font-bold text-slate-700">
+          {error ? 'Unable to Load Product' : 'Product Not Found'}
+        </h2>
+
+        {error && (
+          <p className="mt-2 text-sm text-red-600">{error}</p>
+        )}
+
         <button
           onClick={() => navigate('/')}
-          className="mt-4 px-4 py-2 bg-[#1E2E78] text-white rounded-lg"
+          className="mt-4 rounded-lg bg-[#1E2E78] px-4 py-2 text-white"
         >
           Back to Home
         </button>
       </main>
-    )
+    );
   }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start bg-slate-100 p-6 md:p-10 rounded-2xl">
-        
-        {/* Left Column: Image Grid */}
+      <div className="grid grid-cols-1 items-start gap-8 rounded-2xl bg-slate-100 p-6 md:grid-cols-2 md:p-10">
+
+        {/* Left Column: Product Images */}
         <div className="grid grid-cols-2 gap-3">
-          {product.galleryImages && product.galleryImages.length > 0 ? (
-            product.galleryImages.map((img, idx) => (
-              <div key={idx} className="bg-white p-3 rounded-xl shadow-sm flex items-center justify-center">
-                <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-auto object-contain" />
-              </div>
-            ))
+          {product.galleryImages &&
+          product.galleryImages.length > 0 ? (
+            product.galleryImages.map(
+              (img: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-center rounded-xl bg-white p-3 shadow-sm"
+                >
+                 
+<img
+  src={product.image}
+  alt={product.name}
+  className="w-full max-w-md object-contain"
+  onError={(e) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = '/images/product-placeholder.png';
+  }}
+/>
+
+                </div>
+              )
+            )
           ) : (
-            <div className="col-span-2 bg-white p-6 rounded-xl shadow-sm flex items-center justify-center">
-              <img src={product.image} alt={product.name} className="w-full max-w-md object-contain" />
+            <div className="col-span-2 flex items-center justify-center rounded-xl bg-white p-6 shadow-sm">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-full max-w-md object-contain"
+              />
             </div>
           )}
         </div>
 
-        {/* Right Column: Technical Datasheet Info */}
-        <div className="flex flex-col justify-between h-full space-y-6 pt-2">
+        {/* Right Column: Product Information */}
+        <div className="flex h-full flex-col justify-between space-y-6 pt-2">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1E2E78] tracking-tight uppercase leading-tight">
+            <h1 className="text-3xl font-extrabold uppercase leading-tight tracking-tight text-[#1E2E78] md:text-4xl">
               {product.name}
             </h1>
 
-            <p className="mt-4 text-xs md:text-sm text-slate-600 uppercase leading-relaxed font-medium">
+            <p className="mt-4 text-xs font-medium uppercase leading-relaxed text-slate-600 md:text-sm">
               {product.description}
             </p>
 
-            <ul className="mt-6 space-y-1.5 text-xs md:text-sm font-semibold text-slate-800">
-              <li>• STYLE: {product.styleCode || '401360_03'}</li>
-              <li>• COLOUR: {product.color || 'PUMA WHITE-DARK CRIMSON-GUM'}</li>
+            <ul className="mt-6 space-y-1.5 text-xs font-semibold text-slate-800 md:text-sm">
+              <li>
+                • STYLE: {product.styleCode || 'Not specified'}
+              </li>
+              <li>
+                • COLOUR: {product.color || 'Not specified'}
+              </li>
+              <li>
+                • CATEGORY: {product.category || 'Not specified'}
+              </li>
             </ul>
 
-            {product.stockCount && product.stockCount <= 3 && (
-              <p className="mt-4 text-xs font-extrabold text-blue-900 uppercase tracking-wide">
-                ONLY {product.stockCount} LEFT — MAKE IT YOURS!
+            {typeof product.stockCount === 'number' &&
+              product.stockCount > 0 &&
+              product.stockCount <= 3 && (
+                <p className="mt-4 text-xs font-extrabold uppercase tracking-wide text-blue-900">
+                  ONLY {product.stockCount} LEFT — MAKE IT YOURS!
+                </p>
+              )}
+
+            {product.stockCount === 0 && (
+              <p className="mt-4 text-xs font-extrabold uppercase tracking-wide text-red-600">
+                OUT OF STOCK
               </p>
             )}
 
             <div className="mt-6">
-              <p className="text-sm font-extrabold text-slate-900 uppercase">{product.color || product.name}</p>
-              <p className="text-lg font-black text-slate-900">₱{product.price.toLocaleString()}</p>
+              <p className="text-sm font-extrabold uppercase text-slate-900">
+                {product.color || product.name}
+              </p>
+
+              <p className="text-lg font-black text-slate-900">
+                ₱{product.price.toLocaleString('en-PH')}
+              </p>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3 pt-4">
             <button
+              disabled={product.stockCount === 0}
               onClick={() => alert(`Buying ${product.name} now!`)}
-              className="flex-1 py-3.5 bg-[#1E2E78] hover:bg-[#16235e] text-white font-extrabold rounded-xl shadow-lg transition-all text-center text-sm tracking-wider uppercase"
+              className="flex-1 rounded-xl bg-[#1E2E78] py-3.5 text-center text-sm font-extrabold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#16235e] disabled:cursor-not-allowed disabled:bg-gray-400"
             >
               BUY NOW
             </button>
 
             <button
+              disabled={product.stockCount === 0}
               onClick={() => alert(`${product.name} added to cart!`)}
-              className="p-3.5 bg-[#1E2E78] hover:bg-[#16235e] text-white rounded-xl shadow-lg transition-all"
+              className="rounded-xl bg-[#1E2E78] p-3.5 text-white shadow-lg transition-all hover:bg-[#16235e] disabled:cursor-not-allowed disabled:bg-gray-400"
               title="Add to Cart"
             >
               <ShoppingBag size={20} />
             </button>
 
             <button
-              onClick={() => alert(`${product.name} added to favorites!`)}
-              className="p-3.5 bg-[#1E2E78] hover:bg-[#16235e] text-white rounded-xl shadow-lg transition-all"
+              onClick={() =>
+                alert(`${product.name} added to favorites!`)
+              }
+              className="rounded-xl bg-[#1E2E78] p-3.5 text-white shadow-lg transition-all hover:bg-[#16235e]"
               title="Add to Favorites"
             >
               <Heart size={20} />
             </button>
           </div>
-
         </div>
       </div>
     </main>
-  )
+  );
 }
