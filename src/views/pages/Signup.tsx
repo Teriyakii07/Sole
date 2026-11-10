@@ -11,6 +11,8 @@ import {
 import { handleSignUp } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
+import { sendPhilSMSOTP } from "../../controllers/otpController";
+
 
 interface FormErrors {
   firstName?: string;
@@ -36,11 +38,16 @@ export const SignUpPage: React.FC = () => {
     confirmPassword: ''
   });
 
+  
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
+
+const [otpHash, setOtpHash] = useState('');
+const [otpCreatedAt, setOtpCreatedAt] = useState(0);
+const [otpPhone, setOtpPhone] = useState('');
 
   const handleTabSwitch = (tab: 'login' | 'signup') => {
     setActiveTab(tab);
@@ -117,44 +124,49 @@ export const SignUpPage: React.FC = () => {
   };
 
   const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setIsLoading(true);
-    setErrors({});
+  setIsLoading(true);
+  setErrors({});
 
-    try {
-      const res = await handleSignUp({
-        ...formData,
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim().toLowerCase(),
-        phone: formData.phone.replace(/[\s-]/g, '')
-      });
+  try {
+    const res = await handleSignUp({
+      ...formData,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phone: formData.phone.replace(/[\s-]/g, '')
+    });
 
-      if (!res.success) {
-        setErrors({
-          general: res.message || 'Unable to create your account.'
-        });
-        return;
-      }
-
-      // Open OTP modal
-      if (res.requiresOTP) {
-        setShowOTP(true);
-      }
-
-    } catch (error) {
-      console.error('Signup error:', error);
-
+    if (!res.success) {
       setErrors({
-        general: 'Something went wrong. Please try again.'
+        general: res.message || 'Unable to create your account.'
       });
-    } finally {
-      setIsLoading(false);
+
+      return;
     }
-  };
+
+    if (res.requiresOTP) {
+      setOtpPhone(res.phone || '');
+      setOtpHash(res.otpHash || '');
+      setOtpCreatedAt(res.createdAt || 0);
+
+      setShowOTP(true);
+    }
+
+  } catch (error) {
+    console.error('Signup Error:', error);
+
+    setErrors({
+      general: 'Something went wrong. Please try again.'
+    });
+
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
   // Input styling
@@ -403,18 +415,20 @@ export const SignUpPage: React.FC = () => {
 
       {/* OTP Verification Modal */}
       <OTPModal
-        isOpen={showOTP}
-        phone={formData.phone.replace(/[\s-]/g, '')}
-        purpose="REGISTRATION"
-        onClose={() => setShowOTP(false)}
-        onSuccess={async () => {
-          setShowOTP(false);
+  isOpen={showOTP}
+  phone={otpPhone}
+  purpose="REGISTRATION"
+  hash={otpHash}
+  createdAt={otpCreatedAt}
+  onClose={() => setShowOTP(false)}
+  onSuccess={() => {
+    setShowOTP(false);
 
-          alert('Phone verification successful! Please log in.');
+    alert('Phone verification successful! Please log in.');
 
-          navigate('/login');
-        }}
-      />
+    navigate('/login');
+  }}
+/>
 
     </AuthLayout>
   );
