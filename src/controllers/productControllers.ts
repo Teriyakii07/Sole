@@ -3,6 +3,33 @@ import { supabase } from '../lib/supabaseClient';
 import type { Product, HomeCategory } from '../models/Product';
 import { getProductImageUrl } from './productImageController';
 
+const FALLBACK_CATEGORY_IMAGE =
+  '/images/products/puma-crimson-gum.png';
+
+const categoryImages: Record<string, string> = {
+  sneakers: '/images/products/puma-crimson-gum.png',
+  oxford: '/images/products/oxford.png',
+  'chelsea-boots': '/images/products/chelsea-boots.png',
+  loafers: '/images/products/loafers.png',
+  'running-shoes': '/images/products/running-shoes.png',
+  espadrilles: '/images/products/espadrilles.png',
+};
+
+// GET NAME FROM SUPABASE RELATIONSHIP
+function getRelationName(relation: unknown): string {
+  if (Array.isArray(relation)) {
+    return relation[0]?.name?.trim() ?? '';
+  }
+
+  if (relation && typeof relation === 'object' && 'name' in relation) {
+    const name = relation.name;
+    return typeof name === 'string' ? name.trim() : '';
+  }
+
+  return '';
+}
+
+// GET HOMEPAGE CATEGORIES
 export async function getHomepageCategories(): Promise<HomeCategory[]> {
   const { data, error } = await supabase
     .from('categories')
@@ -18,21 +45,28 @@ export async function getHomepageCategories(): Promise<HomeCategory[]> {
     id: category.id,
     name: category.name,
     slug: category.slug,
-    image: '',
+    image: categoryImages[category.slug] ?? FALLBACK_CATEGORY_IMAGE,
   }));
 }
 
+// GET HOMEPAGE PRODUCTS
 export async function getHomepageProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select(`
       id,
       name,
+      brand_id,
       description,
       image_url,
       created_at,
       is_active,
       categories (
+        id,
+        name
+      ),
+      brands (
+        id,
         name
       ),
       product_variants (
@@ -52,52 +86,48 @@ export async function getHomepageProducts(): Promise<Product[]> {
     throw new Error(`Unable to load products: ${error.message}`);
   }
 
-  const products: (Product | null)[] = (data ?? []).map(
-    (item): Product | null => {
-      const availableVariants = (item.product_variants ?? []).filter(
-        (variant) =>
-          variant.is_active &&
-          Number(variant.stock_quantity) > 0
-      );
+  const products: (Product | null)[] = (data ?? []).map((item): Product | null => {
+    const availableVariants = (item.product_variants ?? []).filter(
+      (variant) =>
+        variant.is_active &&
+        Number(variant.stock_quantity) > 0
+    );
 
-      // Exclude products without available stock.
-      if (availableVariants.length === 0) {
-        return null;
-      }
-
-      const prices = availableVariants.map((variant) =>
-        Number(variant.price)
-      );
-
-      const lowestPrice = Math.min(...prices);
-
-      const totalStock = availableVariants.reduce(
-        (total, variant) =>
-          total + Number(variant.stock_quantity),
-        0
-      );
-
-      return {
-        id: item.id,
-        name: item.name,
-        price: lowestPrice,
-
-        // Convert the Supabase Storage path into a public URL.
-        image: getProductImageUrl(item.image_url),
-
-        category: item.categories?.[0]?.name ?? '',
-        isNew: true,
-        description: item.description ?? '',
-        stockCount: totalStock,
-      };
+    if (availableVariants.length === 0) {
+      return null;
     }
-  );
+
+    const prices = availableVariants.map((variant) =>
+      Number(variant.price)
+    );
+
+    const lowestPrice = Math.min(...prices);
+
+    const totalStock = availableVariants.reduce(
+      (total, variant) =>
+        total + Number(variant.stock_quantity),
+      0
+    );
+
+    return {
+      id: item.id,
+      name: item.name,
+      brand: getRelationName(item.brands),
+      price: lowestPrice,
+      image: getProductImageUrl(item.image_url),
+      category: getRelationName(item.categories),
+      description: item.description ?? '',
+      stockCount: totalStock,
+      createdAt: item.created_at,
+    };
+  });
 
   return products.filter(
     (product): product is Product => product !== null
   );
 }
 
+// GET PRODUCT BY ID
 export async function getProductById(
   id: string
 ): Promise<Product | null> {
@@ -110,9 +140,16 @@ export async function getProductById(
     .select(`
       id,
       name,
+      brand_id,
       description,
       image_url,
+      created_at,
       categories (
+        id,
+        name
+      ),
+      brands (
+        id,
         name
       ),
       product_variants (
@@ -161,15 +198,14 @@ export async function getProductById(
   return {
     id: data.id,
     name: data.name,
+    brand: getRelationName(data.brands),
     price: lowestPrice,
-
-    // Convert the Supabase Storage path into a public URL.
     image: getProductImageUrl(data.image_url),
-
-    category: data.categories?.[0]?.name ?? '',
+    category: getRelationName(data.categories),
     styleCode: firstVariant?.sku ?? '',
     color: firstVariant?.color ?? '',
     description: data.description ?? '',
     stockCount: totalStock,
+    createdAt: data.created_at,
   };
 }

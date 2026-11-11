@@ -1,9 +1,9 @@
 import { ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import type { Product } from '../../../models/Product';
 import ProductCard from './ProductCard';
-import { useFavorites } from '../../../context/Favoritescontext';
+import { useCartController } from '../../../controllers/cartControllers';
 
 interface NewArrivalsProps {
   products: Product[];
@@ -14,8 +14,21 @@ export default function NewArrivals({
   products,
   loading,
 }: NewArrivalsProps) {
-  const navigate = useNavigate();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const [favorites, setFavorites] = useState<(string | number)[]>([]);
+  const { addToCart, totalItems } = useCartController();
+
+  function toggleFavorite(id: string | number) {
+    setFavorites((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  }
+
+  function handleAddToCart(product: Product) {
+    addToCart(product, "1");
+    window.alert(`${product.name} added to cart!`);
+  }
 
   return (
     <section className="px-5 pb-8 pt-2 sm:px-8">
@@ -24,12 +37,12 @@ export default function NewArrivals({
           New Arrivals
         </h2>
 
-        <a
-          href="/shop"
+        <Link
+          to="/shop"
           className="flex items-center gap-1 text-xs text-sole-blue sm:text-sm"
         >
           VIEW ALL <ArrowRight size={19} />
-        </a>
+        </Link>
       </div>
 
       {loading ? (
@@ -46,12 +59,18 @@ export default function NewArrivals({
             <ProductCard
               key={product.id}
               product={product}
-              isFavorite={isFavorite(product.id)}
-              onToggleFavorite={() => void toggleFavorite(product)}
-              onAddToCart={(p) => navigate(`/product/${p.id}`)}
+              isFavorite={favorites.includes(product.id)}
+              onToggleFavorite={toggleFavorite}
+              onAddToCart={handleAddToCart}
             />
           ))}
         </div>
+      )}
+
+      {totalItems > 0 && (
+        <p className="mt-3 text-right text-xs text-gray-500">
+          Items in your cart: {totalItems}
+        </p>
       )}
     </section>
   );

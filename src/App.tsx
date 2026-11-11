@@ -28,6 +28,9 @@ import FAQPage from './views/pages/FAQPage';
 import { LoginPage } from './views/pages/Login';
 import { SignUpPage } from './views/pages/Signup';
 import ProductCatalog from './views/pages/ProductCatalog';
+import Checkout from './views/pages/Checkout'
+import Shop from './views/pages/Shop';
+import Favorites from './views/pages/Favorites';
 
 function MainLayout() {
   const location = useLocation();
@@ -53,44 +56,40 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <CartProvider>
-          <FavoritesProvider>
-            <Routes>
-              <Route element={<MainLayout />}>
-                {/* Guest-only routes */}
-                <Route element={<GuestRoute />}>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/signup" element={<SignUpPage />} />
-                </Route>
+        <Routes>
+          <Route element={<MainLayout />}>
+            {/* Guest-only routes */}
+{/* Login is guest-only */}
+            <Route element={<GuestRoute />}>
+              <Route path="/login" element={<LoginPage />} />
+            </Route>
 
-                {/* Admin-only routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<AdminRoute />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                  </Route>
-                </Route>
+            {/* Signup must remain accessible until OTP verification */}
+            <Route path="/signup" element={<SignUpPage />} />
 
-                {/* Logged-in only */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/profile" element={<Profile />} />
-                </Route>
-
-                {/* Public pages (cart and favorites open for everyone) */}
-                <Route path="/" element={<HomePage />} />
-                <Route path="/shop" element={<div>Shop page coming soon.</div>} />
-                <Route path="/cart" element={<ShoppingCartView />} />
-                <Route path="/favorites" element={<FavoritesPage />} />
-                <Route path="/about" element={<AboutUs />} />
-                <Route path="/contact" element={<ContactUs />} />
-                <Route path="/faqs" element={<FAQPage />} />
-                <Route path="/product/:id" element={<ProductCatalog />} />
-
-                {/* Unknown routes */}
-                <Route path="*" element={<div>Page not found.</div>} />
+            {/* Admin-only routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminDashboard />} />
               </Route>
-            </Routes>
-          </FavoritesProvider>
-        </CartProvider>
+            </Route>
+
+            {/* Customer/public pages */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/cart" element={<ShoppingCartView />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/faqs" element={<FAQPage />} />
+            <Route path="/product/:id" element={<ProductCatalog />} />
+            <Route path="/checkout" element={<Checkout />} />
+
+            {/* Unknown routes */}
+            <Route path="*" element={<div>Page not found.</div>} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   );

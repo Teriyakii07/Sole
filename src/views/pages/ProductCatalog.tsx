@@ -1,9 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, Image as ImageIcon, ShoppingBag } from 'lucide-react';
+import {
+  Heart,
+  ShoppingBag,
+  Minus,
+  Plus,
+  Check,
+  AlertCircle,
+  X,
+} from 'lucide-react';
 
 import { getProductById } from '../../controllers/productControllers';
-import { supabase } from '../../lib/supabaseClient';
+import { useCartController } from '../../controllers/cartControllers';
+import {
+  isFavorite as checkFavorite,
+  toggleFavorite,
+  subscribeToFavorites,
+} from '../../controllers/favoritesControllers';
+
 import type { Product } from '../../models/Product';
 import { handleImageError } from '../../lib/imageFallback';
 import { useCart } from '../../context/Cartcontext';
@@ -18,11 +32,15 @@ interface Variant {
   stock_quantity: number;
 }
 
+const shoeSizes = [
+  '5', '5.5', '6', '6.5', '7',
+  '7.5', '8', '8.5', '9', '9.5',
+];
+
 export default function ProductCatalog() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { addToCart } = useCartController();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -32,6 +50,32 @@ export default function ProductCatalog() {
   const [added, setAdded] = useState(false);
   const [sizeError, setSizeError] = useState(false);
 
+  const [selectedSize, setSelectedSize] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // NOTIFICATION STATE
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: 'success' | 'error' | '';
+  }>({
+    message: '',
+    type: '',
+  });
+
+  // SHOW NOTIFICATION
+  function showNotification(
+    message: string,
+    type: 'success' | 'error'
+  ) {
+    setNotification({ message, type });
+
+    window.setTimeout(() => {
+      setNotification({ message: '', type: '' });
+    }, 3000);
+  }
+
+  // LOAD PRODUCT
   useEffect(() => {
     let isMounted = true;
 
@@ -62,13 +106,8 @@ export default function ProductCatalog() {
 
         if (isMounted) {
           setProduct(result);
-          setVariants(
-            ((variantResult.data ?? []) as Variant[])
-              .map((v) => ({ ...v, price: Number(v.price) }))
-              .sort((a, b) =>
-                a.size_label.localeCompare(b.size_label, undefined, { numeric: true })
-              )
-          );
+          setSelectedSize('');
+          setQuantity(1);
         }
       } catch (err) {
         if (isMounted) {
@@ -92,33 +131,48 @@ export default function ProductCatalog() {
     };
   }, [id]);
 
-  const selectedVariant = useMemo(
-    () => variants.find((v) => v.id === selectedVariantId) ?? null,
-    [variants, selectedVariantId]
-  );
+  // CHECK AND SYNC FAVORITE STATUS
+  useEffect(() => {
+    if (!product) return;
 
+    const updateFavorite = () => {
+      setIsFavorite(checkFavorite(product.id));
+    };
+
+    updateFavorite();
+
+    return subscribeToFavorites(updateFavorite);
+  }, [product]);
+
+  // LOADING
   if (loading) {
     return (
-      <main className="mx-auto max-w-6xl px-6 py-16 text-center">
-        <p className="text-slate-500">Loading product details...</p>
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-gray-500">
+          Loading product details...
+        </p>
       </main>
     );
   }
 
+  // PRODUCT NOT FOUND
   if (error || !product) {
     return (
-      <main className="mx-auto max-w-6xl px-6 py-16 text-center">
+      <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
         <h2 className="text-2xl font-bold text-slate-700">
           {error ? 'Unable to Load Product' : 'Product Not Found'}
         </h2>
 
         {error && (
-          <p className="mt-2 text-sm text-red-600">{error}</p>
+          <p className="mt-2 text-sm text-red-600">
+            {error}
+          </p>
         )}
 
         <button
+          type="button"
           onClick={() => navigate('/')}
-          className="mt-4 rounded-lg bg-[#1E2E78] px-4 py-2 text-white"
+          className="mt-5 rounded-lg bg-[#123A8C] px-6 py-3 text-white hover:bg-[#D7192D]"
         >
           Back to Home
         </button>
@@ -126,209 +180,323 @@ export default function ProductCatalog() {
     );
   }
 
-  const favorited = isFavorite(product.id);
+  // PRODUCT IS GUARANTEED TO EXIST BELOW THIS POINT
+  const currentProduct = product;
 
-  const outOfStock =
-    variants.length > 0
-      ? variants.every((v) => v.stock_quantity === 0)
-      : product.stockCount === 0;
+  const isOutOfStock = currentProduct.stockCount === 0;
 
-  const displayPrice = selectedVariant
-    ? selectedVariant.price
-    : variants.length > 0
-      ? Math.min(...variants.map((v) => v.price))
-      : product.price;
+  const maximumQuantity =
+    typeof currentProduct.stockCount === 'number'
+      ? Math.max(1, Math.min(currentProduct.stockCount, 99))
+      : 99;
 
-  async function handleAddToCart(): Promise<boolean> {
-    if (!selectedVariant) {
-      setSizeError(true);
-      return false;
-    }
-    await addToCart(selectedVariant.id);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-    return true;
-  }
-
-  async function handleBuyNow() {
-    if (!selectedVariant) {
-      setSizeError(true);
+  // ADD TO CART OR BUY NOW
+  function handleAddToBag(goToCheckout = false) {
+    if (!selectedSize) {
+      showNotification('Please select a shoe size first.', 'error');
       return;
     }
-    await addToCart(selectedVariant.id);
-    navigate('/cart');
+
+    if (isOutOfStock) {
+      showNotification('Sorry, this product is out of stock.', 'error');
+      return;
+    }
+
+    addToCart(currentProduct, selectedSize, quantity);
+
+    if (goToCheckout) {
+      navigate('/checkout');
+    } else {
+      showNotification(
+        `${currentProduct.name} added to your bag!`,
+        'success'
+      );
+    }
+  }
+
+  // ADD OR REMOVE FAVORITE
+  function handleToggleFavorite() {
+    const added = toggleFavorite(currentProduct);
+
+    setIsFavorite(added);
+
+    showNotification(
+      added
+        ? `${currentProduct.name} added to your favorites!`
+        : `${currentProduct.name} removed from your favorites.`,
+      'success'
+    );
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-      <div className="grid grid-cols-1 items-start gap-8 rounded-2xl bg-slate-100 p-6 md:grid-cols-2 md:p-10">
+    <main className="relative min-h-screen bg-white px-4 py-8 sm:px-6 lg:px-10">
 
-        {/* Left Column: Product Images */}
-        <div className="grid grid-cols-2 gap-3">
-          {product.galleryImages &&
-          product.galleryImages.length > 0 ? (
-            product.galleryImages.map(
-              (img: string, idx: number) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-center rounded-xl bg-white p-3 shadow-sm"
-                >
-                  {img ? (
-                    <img
-                      src={img}
-                      alt={`${product.name} ${idx + 1}`}
-                      className="w-full max-w-md object-contain"
-                      onError={handleImageError}
-                    />
-                  ) : (
-                    <ImageIcon aria-hidden="true" className="text-gray-300" size={48} />
-                  )}
-                </div>
-              )
-            )
-          ) : (
-            <div className="col-span-2 flex items-center justify-center rounded-xl bg-white p-6 shadow-sm">
-              {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full max-w-md object-contain"
-                  onError={handleImageError}
-                />
-              ) : (
-                <ImageIcon aria-hidden="true" className="text-gray-300" size={48} />
-              )}
-            </div>
-          )}
-        </div>
+      {/* NOTIFICATION */}
+      {notification.message && (
+        <div
+          role="status"
+          className={`fixed right-5 top-5 z-50 flex w-[calc(100%-40px)] max-w-sm items-start gap-3 rounded-xl border bg-white p-4 shadow-xl ${
+            notification.type === 'success'
+              ? 'border-green-200'
+              : 'border-red-200'
+          }`}
+        >
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+              notification.type === 'success'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-600'
+            }`}
+          >
+            {notification.type === 'success' ? (
+              <Check size={21} />
+            ) : (
+              <AlertCircle size={21} />
+            )}
+          </div>
 
-        {/* Right Column: Product Information */}
-        <div className="flex h-full flex-col justify-between space-y-6 pt-2">
-          <div>
-            <h1 className="text-3xl font-extrabold uppercase leading-tight tracking-tight text-[#1E2E78] md:text-4xl">
-              {product.name}
-            </h1>
-
-            <p className="mt-4 text-xs font-medium uppercase leading-relaxed text-slate-600 md:text-sm">
-              {product.description}
+          <div className="flex-1 pt-1">
+            <p className="text-sm font-bold text-gray-900">
+              {notification.type === 'success'
+                ? 'Success'
+                : 'Notice'}
             </p>
 
-            <ul className="mt-6 space-y-1.5 text-xs font-semibold text-slate-800 md:text-sm">
-              <li>
-                • STYLE: {product.styleCode || 'Not specified'}
-              </li>
-              <li>
-                • COLOUR: {selectedVariant?.color || product.color || 'Not specified'}
-              </li>
-              <li>
-                • CATEGORY: {product.category || 'Not specified'}
-              </li>
-            </ul>
-
-            {/* Size picker */}
-            <div className="mt-6">
-              <p className="mb-2 text-xs font-extrabold uppercase text-slate-900">
-                Select size
-              </p>
-
-              {variants.length === 0 ? (
-                <p className="text-xs font-semibold text-red-600">
-                  No sizes available right now.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {variants.map((v) => {
-                    const soldOut = v.stock_quantity === 0;
-                    const selected = v.id === selectedVariantId;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        disabled={soldOut}
-                        onClick={() => {
-                          setSelectedVariantId(v.id);
-                          setSizeError(false);
-                        }}
-                        className={`min-w-[56px] rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
-                          selected
-                            ? 'border-[#1E2E78] bg-[#1E2E78] text-white'
-                            : 'border-slate-300 bg-white text-slate-800 hover:border-[#1E2E78]'
-                        } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:line-through`}
-                      >
-                        {v.size_system} {v.size_label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {sizeError && (
-                <p className="mt-2 text-xs font-bold text-red-600">
-                  Please select a size first.
-                </p>
-              )}
-            </div>
-
-            {selectedVariant &&
-              selectedVariant.stock_quantity > 0 &&
-              selectedVariant.stock_quantity <= 3 && (
-                <p className="mt-4 text-xs font-extrabold uppercase tracking-wide text-blue-900">
-                  ONLY {selectedVariant.stock_quantity} LEFT — MAKE IT YOURS!
-                </p>
-              )}
-
-            {outOfStock && (
-              <p className="mt-4 text-xs font-extrabold uppercase tracking-wide text-red-600">
-                OUT OF STOCK
-              </p>
-            )}
-
-            <div className="mt-6">
-              <p className="text-sm font-extrabold uppercase text-slate-900">
-                {selectedVariant?.color || product.color || product.name}
-              </p>
-
-              <p className="text-lg font-black text-slate-900">
-                ₱{displayPrice.toLocaleString('en-PH')}
-              </p>
-            </div>
+            <p className="mt-1 text-xs leading-5 text-gray-600">
+              {notification.message}
+            </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-4">
-            <button
-              disabled={outOfStock}
-              onClick={() => void handleBuyNow()}
-              className="flex-1 rounded-xl bg-[#1E2E78] py-3.5 text-center text-sm font-extrabold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#16235e] disabled:cursor-not-allowed disabled:bg-gray-400"
-            >
-              BUY NOW
-            </button>
-
-            <button
-              disabled={outOfStock}
-              onClick={() => void handleAddToCart()}
-              className="rounded-xl bg-[#1E2E78] p-3.5 text-white shadow-lg transition-all hover:bg-[#16235e] disabled:cursor-not-allowed disabled:bg-gray-400"
-              title={added ? 'Added!' : 'Add to Cart'}
-              aria-label="Add to cart"
-            >
-              <ShoppingBag size={20} />
-            </button>
-
-            <button
-              onClick={() => void toggleFavorite(product)}
-              aria-pressed={favorited}
-              className="rounded-xl bg-[#1E2E78] p-3.5 text-white shadow-lg transition-all hover:bg-[#16235e]"
-              title={favorited ? 'Remove from Favorites' : 'Add to Favorites'}
-              aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              <Heart size={20} fill={favorited ? '#ffffff' : 'none'} />
-            </button>
-          </div>
-
-          {added && (
-            <p className="text-xs font-bold text-[#1E2E78]">Added to your cart.</p>
-          )}
+          <button
+            type="button"
+            onClick={() =>
+              setNotification({ message: '', type: '' })
+            }
+            className="text-gray-400 transition hover:text-gray-700"
+            aria-label="Close notification"
+          >
+            <X size={18} />
+          </button>
         </div>
+      )}
+
+      <div className="mx-auto grid max-w-[1450px] grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
+
+        {/* SINGLE PRODUCT IMAGE */}
+        <section className="lg:col-span-7">
+          <div className="flex min-h-[400px] items-center justify-center rounded-xl bg-white sm:min-h-[600px] lg:min-h-[680px]">
+            <img
+              src={currentProduct.image}
+              alt={currentProduct.name}
+              className="h-full max-h-[680px] w-full object-contain"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src =
+                  '/images/product-placeholder.png';
+              }}
+            />
+          </div>
+        </section>
+
+        {/* PRODUCT INFORMATION */}
+        <section className="flex flex-col lg:col-span-5 lg:pt-2">
+
+          {/* PRODUCT NAME AND PRICE */}
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="font-bold uppercase text-[#123A8C] underline underline-offset-4">
+                {currentProduct.category || 'SOLE COLLECTION'}
+              </p>
+
+              <h1 className="mt-5 text-2xl font-semibold uppercase leading-tight text-gray-900 sm:text-3xl">
+                {currentProduct.name}
+              </h1>
+
+              <p className="mt-3 text-xl font-bold text-gray-900">
+                {currentProduct.price.toLocaleString('en-PH', {
+                  style: 'currency',
+                  currency: 'PHP',
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            </div>
+
+            {/* FAVORITE BUTTON */}
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              aria-label="Toggle favorite"
+              aria-pressed={isFavorite}
+              className="p-2 text-[#123A8C] transition hover:scale-110"
+            >
+              <Heart
+                size={27}
+                fill={isFavorite ? '#123A8C' : 'none'}
+              />
+            </button>
+          </div>
+
+          {/* PRODUCT INFORMATION */}
+          <div className="mt-7 flex flex-wrap gap-x-8 gap-y-3 border-b border-gray-200 pb-5 text-sm">
+            <p>
+              COLOR:{' '}
+              <span className="font-semibold uppercase">
+                {currentProduct.color || 'Not specified'}
+              </span>
+            </p>
+
+            <p>
+              PRODUCT SKU:{' '}
+              <span className="font-semibold">
+                {currentProduct.styleCode || 'Not specified'}
+              </span>
+            </p>
+          </div>
+
+          {/* DESCRIPTION */}
+          {currentProduct.description && (
+            <p className="mt-5 text-sm leading-6 text-gray-600">
+              {currentProduct.description}
+            </p>
+          )}
+
+          {/* STOCK INFORMATION */}
+          {typeof currentProduct.stockCount === 'number' && (
+            <p
+              className={`mt-5 text-sm font-bold ${
+                isOutOfStock
+                  ? 'text-red-600'
+                  : 'text-gray-700'
+              }`}
+            >
+              {isOutOfStock
+                ? 'OUT OF STOCK'
+                : currentProduct.stockCount <= 3
+                  ? `ONLY ${currentProduct.stockCount} LEFT — MAKE IT YOURS!`
+                  : 'IN STOCK'}
+            </p>
+          )}
+
+          {/* SIZE SELECTION */}
+          <div className="mt-8">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm">
+                SIZE:{' '}
+                <span className="font-bold text-[#123A8C]">
+                  {selectedSize ? `US ${selectedSize}` : 'US'}
+                </span>
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  showNotification('Size chart coming soon.', 'error')
+                }
+                className="text-sm font-bold text-[#123A8C] underline underline-offset-4"
+              >
+                SIZE CHART
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+              {shoeSizes.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setSelectedSize(size)}
+                  className={`flex min-h-[65px] flex-col items-center justify-center border transition ${
+                    selectedSize === size
+                      ? 'border-[#123A8C] bg-[#123A8C] text-white'
+                      : 'border-gray-300 bg-white text-gray-900 hover:border-[#123A8C]'
+                  }`}
+                >
+                  <span className="text-[10px]">US M</span>
+                  <span className="text-lg font-semibold">
+                    {size}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* QUANTITY */}
+          <div className="mt-8 flex items-center justify-between bg-gray-100 px-5 py-4">
+            <span className="text-sm font-medium text-gray-700">
+              Quantity
+            </span>
+
+            <div className="flex items-center gap-7">
+              <button
+                type="button"
+                disabled={quantity <= 1}
+                onClick={() =>
+                  setQuantity((current) => Math.max(1, current - 1))
+                }
+                className="text-gray-900 disabled:opacity-30"
+                aria-label="Decrease quantity"
+              >
+                <Minus size={18} />
+              </button>
+
+              <span className="min-w-5 text-center font-bold">
+                {quantity}
+              </span>
+
+              <button
+                type="button"
+                disabled={
+                  quantity >= maximumQuantity || isOutOfStock
+                }
+                onClick={() =>
+                  setQuantity((current) =>
+                    Math.min(maximumQuantity, current + 1)
+                  )
+                }
+                className="text-gray-900 disabled:opacity-30"
+                aria-label="Increase quantity"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* ADD TO BAG */}
+          <button
+            type="button"
+            disabled={isOutOfStock}
+            onClick={() => handleAddToBag()}
+            className="mt-5 flex w-full items-center justify-center gap-3 bg-[#123A8C] py-5 text-base font-bold uppercase tracking-wide text-white transition hover:bg-[#D7192D] disabled:cursor-not-allowed disabled:bg-gray-400"
+          >
+            <ShoppingBag size={20} />
+            {isOutOfStock ? 'OUT OF STOCK' : 'ADD TO BAG'}
+          </button>
+
+          {/* BUY NOW */}
+          <button
+            type="button"
+            disabled={isOutOfStock}
+            onClick={() => handleAddToBag(true)}
+            className="mt-3 w-full border border-[#123A8C] py-4 font-bold uppercase tracking-wide text-[#123A8C] transition hover:bg-[#123A8C] hover:text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
+          >
+            BUY NOW
+          </button>
+
+          {/* AUTHENTICITY */}
+          <div className="mt-8 flex items-center gap-4 text-sm text-gray-800">
+            <Check size={22} strokeWidth={2.5} />
+
+            <p>
+              <span className="font-bold">
+                Authenticity Guaranteed:
+              </span>{' '}
+              100% Genuine Products.
+            </p>
+          </div>
+
+          <p className="mt-5 text-sm text-gray-500">
+            Step Into Style with SOLE.
+          </p>
+        </section>
       </div>
     </main>
   );

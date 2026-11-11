@@ -1,3 +1,4 @@
+
 export interface CartItem {
   id: string;        // cart_items.id
   variantId: string; // product_variants.id
@@ -8,14 +9,18 @@ export interface CartItem {
   color: string;
   price: number;
   quantity: number;
-  stock: number;
+  size?: string;
 }
 
-export const calculateTotalItems = (cart: CartItem[]): number =>
-  cart.reduce((sum, item) => sum + item.quantity, 0);
+export const calculateTotalItems = (cart: CartItem[]) =>
+  cart.reduce((total, item) => total + item.quantity, 0);
 
-export const calculateSubtotal = (cart: CartItem[]): number =>
-  cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+export const calculateSubtotal = (cart: CartItem[]) =>
+  cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
-export const formatPrice = (amount: number): string =>
-  `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const formatPrice = (price: number) =>
+  price.toLocaleString('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  });
