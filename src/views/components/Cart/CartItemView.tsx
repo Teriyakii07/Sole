@@ -12,25 +12,32 @@ interface CartItemViewProps {
 
 export const CartItemView = ({
   item,
-  inputQuantity,
   onQuantityChange,
-  onUpdate,
   onRemove,
 }: CartItemViewProps) => {
+  const maxQuantity = item.stock > 0 ? Math.min(99, item.stock) : 99
+
   return (
     <div className="flex flex-wrap items-start gap-4 border-b border-gray-200 py-6 sm:flex-nowrap">
 
       {/* PRODUCT IMAGE */}
-      <img
-        src={item.image}
-        alt={item.name}
-        className="h-[90px] w-[90px] shrink-0 rounded-[4px] bg-gray-100 object-contain sm:h-[130px] sm:w-[130px]"
-      />
+      {item.image ? (
+        <img
+          src={item.image}
+          alt={item.name}
+          className="h-[90px] w-[90px] shrink-0 rounded-[4px] bg-gray-100 object-contain sm:h-[130px] sm:w-[130px]"
+          onError={handleImageError}
+        />
+      ) : (
+        <div className="flex h-[90px] w-[90px] shrink-0 items-center justify-center rounded-[4px] bg-gray-100 text-gray-300 sm:h-[130px] sm:w-[130px]">
+          <ImageIcon aria-hidden="true" size={32} />
+        </div>
+      )}
 
       {/* PRODUCT DETAILS */}
       <div className="min-w-0 flex-1">
 
-        <h2 className="mb-2 font-montserrat text-[15px] font-bold text-black">
+        <h2 className="mb-1 font-montserrat text-[15px] font-bold text-black">
           {item.name}
         </h2>
 
@@ -46,31 +53,31 @@ export const CartItemView = ({
         </p>
 
         {/* QUANTITY */}
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <label
-            htmlFor={`qty-${item.id}`}
-            className="text-xs text-gray-600"
-          >
-            Quantity:
-          </label>
-
-          <input
-            type="number"
-            id={`qty-${item.id}`}
-            value={inputQuantity}
-            onChange={(e) => onQuantityChange(item.id, e.target.value)}
-            min="0"
-            max="99"
-            className="w-[60px] rounded-[3px] border border-gray-300 bg-white p-2 text-sm outline-none focus:border-[#173B8C]"
-          />
-
-          <button
+        <div className="mb-3 flex items-center gap-3">
+          <span className="text-xs text-gray-600">Quantity:</span>
+          <div className="flex items-center rounded-[3px] border border-gray-300">
+            <button
             type="button"
-            onClick={() => onUpdate(item.id)}
-            className="cursor-pointer rounded-[3px] bg-[#173B8C] px-4 py-[9px] text-xs font-bold text-white hover:bg-[#0B2B6D]"
-          >
-            UPDATE
-          </button>
+              aria-label={`Decrease quantity of ${item.name}`}
+              disabled={item.quantity <= 1}
+              onClick={() => onQuantityChange(item.id, item.quantity - 1)}
+              className="px-3 py-1 text-lg font-bold text-[#173B8C] disabled:cursor-not-allowed disabled:text-gray-300"
+            >
+              −
+            </button>
+            <span className="min-w-8 text-center text-sm" aria-live="polite">
+              {item.quantity}
+            </span>
+            <button
+              type="button"
+              aria-label={`Increase quantity of ${item.name}`}
+              disabled={item.quantity >= maxQuantity}
+              onClick={() => onQuantityChange(item.id, item.quantity + 1)}
+              className="px-3 py-1 text-lg font-bold text-[#173B8C] disabled:cursor-not-allowed disabled:text-gray-300"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* REMOVE */}

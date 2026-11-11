@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Routes,
@@ -8,6 +7,8 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/Cartcontext';
+import { FavoritesProvider } from './context/Favoritescontext';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
@@ -18,6 +19,7 @@ import Footer from './views/components/Home/Footer';
 
 import HomePage from './views/pages/HomePage';
 import ShoppingCartView from './views/pages/Cart';
+import FavoritesPage from './views/pages/Favorites';
 import Profile from './views/pages/Profile';
 import AboutUs from './views/pages/Aboutus';
 import ContactUs from './views/pages/ContactUs';

@@ -5,6 +5,9 @@ import { formatPrice } from '../../models/Cart';
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import type { Profile as ProfileData, Address, AddressFormData } from '../../models/Profile';
 import { handleLogout } from '../../controllers/authController';
+import { useFavorites } from '../../context/Favoritescontext';
+import ProductCard from '../components/Home/ProductCard';
+import { CartItemView } from '../components/Cart/CartItemView';
 
 const inputClass = 'w-full min-w-0 rounded-lg border border-[#DDE1E7] bg-white px-3 py-3 text-xs outline-none focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100';
 const primaryClass = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-[#123A8C] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#0D2D70]';

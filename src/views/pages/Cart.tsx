@@ -7,11 +7,9 @@ import { formatPrice } from '../../models/Cart';
 export default function ShoppingCartView() {
   const {
     cart,
-    inputQuantities,
     totalItems,
     subtotal,
-    handleQuantityInputChange,
-    updateQuantity,
+    changeQuantity,
     removeItem,
   } = useCartController();
 

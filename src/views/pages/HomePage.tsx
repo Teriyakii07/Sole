@@ -22,6 +22,21 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const categoriesWithImages = categories.map((category) => {
+    const categoryProduct = products.find(
+      (product) =>
+        product.category
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') === category.slug
+    );
+
+    return {
+      ...category,
+      image: categoryProduct?.image ?? '',
+    };
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -73,7 +88,7 @@ export default function HomePage() {
       )}
 
       <CategorySection
-        categories={categories}
+        categories={categoriesWithImages}
         loading={loading}
       />
 
