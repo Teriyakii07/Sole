@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { Heart, Image as ImageIcon } from 'lucide-react'
+import { Heart } from 'lucide-react'
 import type { Product } from '../../../models/Product'
-import { handleImageError } from '../../../lib/imageFallback'
 
 interface ProductCardProps {
   product: Product
@@ -28,20 +27,18 @@ export default function ProductCard({
       onClick={handleCardClick}
       className="cursor-pointer overflow-hidden rounded-xl border border-gray-100 bg-white transition-all hover:shadow-md"
     >
-      <div className="relative flex h-[140px] items-center justify-center bg-[#f4f4f4] sm:h-[170px]">
+      <div className="relative flex h-[100px] items-center justify-center bg-[#f4f4f4] sm:h-[115px]">
 
-        {product.image && (
-          <img
-            src={product.image}
-            alt={product.name}
-            className="h-full w-full object-contain p-3 sm:p-4"
-            loading="lazy"
-            onError={handleImageError}
-          />
-        )}
-        {!product.image && (
-          <ImageIcon aria-hidden="true" className="text-gray-300" size={32} />
-        )}
+        <img
+          src={product.image}
+          alt={product.name}
+          className="h-full w-full object-contain p-2"
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = '/images/product-placeholder.png';
+          }}
+        />
 
 
         {/* Jett: Favorite Button: e.stopPropagation() prevents triggering handleCardClick */}
@@ -63,12 +60,12 @@ export default function ProductCard({
         </button>
       </div>
 
-      <div className="p-3 sm:p-4">
-        <h3 className="line-clamp-2 min-h-[32px] text-xs leading-tight font-bold sm:text-sm">
+      <div className="p-2">
+        <h3 className="line-clamp-2 min-h-[25px] text-[9px] leading-tight font-bold sm:text-[10px]">
           {product.name}
         </h3>
 
-        <p className="text-xs font-bold text-sole-blue sm:text-sm">
+        <p className="text-[10px] font-bold text-sole-blue">
           {product.price.toLocaleString('en-PH', {
             style: 'currency',
             currency: 'PHP',
@@ -76,14 +73,15 @@ export default function ProductCard({
           })}
         </p>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-2 flex justify-end">
+          {/* Jett: Add to Cart Button: e.stopPropagation() prevents triggering handleCardClick */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
               onAddToCart(product)
             }}
-            className="rounded-sm bg-sole-blue px-3 py-2 text-[10px] text-white transition hover:bg-blue-800 sm:px-4 sm:text-xs"
+            className="rounded-sm bg-sole-blue px-3 py-1.5 text-[8px] text-white transition hover:bg-blue-800 sm:text-[9px]"
           >
             ADD TO CART
           </button>
