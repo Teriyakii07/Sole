@@ -1,5 +1,11 @@
+
 allowBuilds:
   esbuild: false
+
 permissions:
   dotenv:
     skills: true
+
+skills:
+  dirs:
+    - .claude/skills
