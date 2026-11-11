@@ -6,7 +6,6 @@ import type {
 } from '../views/types/AuthTypes';
 
 import { sendPhilSMSOTP } from './otpController';
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 
 // Helper function to format any PH number (+639..., 639..., 09...) into 639XXXXXXXXX
@@ -25,157 +24,62 @@ function formatPhilippinePhone(phone: string): string {
   return cleaned;
 }
 
-// The password check runs on this isolated, in-memory client, so nothing is saved
-// in the browser and the main `supabase` client stays signed out until the OTP passes.
-const env = (import.meta as any).env ?? {};
-const authProbe = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-    storageKey: 'sole-2fa-probe'
-  }
-});
-
 // Session from a correct password, held in memory until the OTP is verified.
-let pendingSession: { access_token: string; refresh_token: string } | null = null;
 
-// Drop the held session and revoke it on the server (used on cancel / failure).
-const discardPendingSession = (): void => {
-  if (pendingSession) {
-    pendingSession = null;
-    void authProbe.auth.signOut({ scope: 'local' });
-  }
-};
-
-export const handleLogin = async (
+export async function handleLogin(
   credentials: LoginPayload
-): Promise<AuthResponse> => {
+): Promise<AuthResponse> {
   try {
-    const rawInput = credentials.usernameOrEmail.trim();
+    const identifier = credentials.usernameOrEmail?.trim();
+    const password = credentials.password;
 
-    if (!rawInput || !credentials.password) {
+    if (!identifier || !password) {
       return {
         success: false,
-        message: 'Please enter your email/phone number and password.'
+        message: 'Please enter your email and password.',
       };
     }
 
-    let loginEmail = rawInput.toLowerCase();
-
-    // 1. Detect if the user entered a Philippine phone number instead of an email
-    const isPhoneInput = /^(\+639\d{9}|639\d{9}|09\d{9})$/.test(rawInput.replace(/[\s()-]/g, ''));
-
-    if (isPhoneInput) {
-      const formattedInputPhone = formatPhilippinePhone(rawInput);
-
-      // Query profiles table to find the linked email for this phone number
-      const { data: phoneProfile, error: phoneError } = await supabase
-        .from('profiles')
-        .select('id, email, phone_number')
-        .eq('phone_number', formattedInputPhone)
-        .maybeSingle();
-
-      if (phoneError || !phoneProfile || !phoneProfile.email) {
-        return {
-          success: false,
-          message: 'No account found linked to this mobile number.'
-        };
-      }
-
-      // Map resolved profile email to login credentials
-      loginEmail = phoneProfile.email;
-    }
-
-    // 2. Authenticate credentials with Supabase Auth using resolved email
-    const { data: authData, error: authError } = await authProbe.auth.signInWithPassword({
-      email: loginEmail,
-      password: credentials.password
+    // Login directly through Supabase.
+    // No login OTP should be sent here.
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: identifier,
+      password,
+      
     });
 
-    if (authError || !authData.user) {
+    
+
+    if (error) {
+      console.error('Supabase login error:', error);
+
       return {
         success: false,
-        message: authError?.message || 'Invalid email/phone number or password.'
+        message: error.message,
       };
     }
 
-    let rawPhone = '';
-
-    // 3. Fetch phone from profiles table using authenticated session
-    const { data: profile } = await authProbe
-      .from('profiles')
-      .select('phone_number')
-      .eq('id', authData.user.id)
-      .maybeSingle();
-
-    if (profile?.phone_number) {
-      rawPhone = profile.phone_number;
-    }
-
-    // 4. Fallback to auth metadata if profile query yields nothing
-    if (!rawPhone) {
-      rawPhone =
-        authData.user.user_metadata?.phone_number ||
-        authData.user.user_metadata?.phone ||
-        authData.user.phone ||
-        '';
-    }
-
-    // 5. Strictly format to 639XXXXXXXXX (12 digits)
-    const formattedPhone = formatPhilippinePhone(rawPhone);
-
-    console.log('User ID:', authData.user.id);
-    console.log('Fetched Raw Phone:', rawPhone);
-    console.log('Formatted Phone for PhilSMS:', formattedPhone);
-
-    // 5b. Password is correct, but the user is NOT signed in until the OTP passes.
-    //     Keep the session in memory only; the main client is still signed out.
-    pendingSession = authData.session
-      ? {
-          access_token: authData.session.access_token,
-          refresh_token: authData.session.refresh_token
-        }
-      : null;
-
-    // GUARD: Catch empty/invalid numbers locally BEFORE calling backend API
-    if (!formattedPhone || !/^(639\d{9})$/.test(formattedPhone)) {
-      discardPendingSession();
+    if (!data.user || !data.session) {
       return {
         success: false,
-        message: 'No registered Philippine mobile number found in your profile. Please check Supabase profiles.'
-      };
-    }
-
-    // 6. Send PhilSMS OTP directly with standard formattedPhone
-    const otpResult = await sendPhilSMSOTP(formattedPhone, 'login');
-
-    if (!otpResult.success) {
-      discardPendingSession();
-      return {
-        success: false,
-        message: otpResult.message ?? 'Unable to send OTP via PhilSMS. Please try again.'
+        message: 'Unable to establish your login session.',
       };
     }
 
     return {
       success: true,
-      requiresOTP: true,
-      message: otpResult.message ?? 'OTP sent successfully via PhilSMS.',
-      phone: otpResult.phone,
-      otpHash: otpResult.otpHash,
-      createdAt: otpResult.createdAt
+      message: 'Login successful.',
     };
 
   } catch (error) {
-    console.error('Login Error:', error);
-    discardPendingSession();
+    console.error('Login error:', error);
+
     return {
       success: false,
-      message: 'An unexpected error occurred during login.'
+      message: 'An unexpected error occurred during login.',
     };
   }
-};
+}
 
 export const handleSignUp = async (
   data: SignUpPayload
@@ -282,37 +186,21 @@ export const handleSignUp = async (
   }
 };
 
-// Call after the 2FA OTP is verified: restores the parked session so the user is signed in.
-export const completeLogin = async (): Promise<AuthResponse> => {
-  if (!pendingSession) {
+export async function handleLogout(): Promise<AuthResponse> {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
     return {
       success: false,
-      message: 'Your login session expired. Please sign in again.'
+      message: error.message,
     };
   }
 
-  const { error } = await supabase.auth.setSession(pendingSession);
-  pendingSession = null;
-
-  if (error) {
-    return { success: false, message: error.message };
-  }
-
-  return { success: true, message: 'Signed in successfully.' };
-};
-
-// Call if the user closes the OTP modal without verifying.
-export const cancelPendingLogin = (): void => {
-  discardPendingSession();
-};
-
-export const handleLogout = async (): Promise<AuthResponse> => {
-  await supabase.auth.signOut();
   return {
     success: true,
-    message: 'Successfully logged out.'
+    message: 'Logged out successfully.',
   };
-};
+}
 
 export const handleForgotPassword = async (
   email: string

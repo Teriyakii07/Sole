@@ -10,13 +10,8 @@ import {
   Loader2
 } from 'lucide-react';
 
-import {
-  handleLogin,
-  completeLogin,
-  cancelPendingLogin
-} from '../../controllers/authController';
+import { handleLogin } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
-import { OTPModal } from '../components/Auth/OTPModal';
 
 interface LoginErrors {
   usernameOrEmail?: string;
@@ -38,12 +33,6 @@ export const LoginPage: React.FC = () => {
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // OTP states
-  const [showOTP, setShowOTP] = useState(false);
-  const [otpPhone, setOtpPhone] = useState('');
-  const [otpHash, setOtpHash] = useState('');
-  const [otpCreatedAt, setOtpCreatedAt] = useState<number>(0);
 
   // Forgot password states
   const [isForgotPassView, setIsForgotPassView] = useState(false);
@@ -90,53 +79,39 @@ export const LoginPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const onLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    if (!validateLogin()) return;
 
-    setIsLoading(true);
-    setErrors({});
+const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    try {
-      const res = await handleLogin({
-        usernameOrEmail: credentials.usernameOrEmail.trim(),
-        password: credentials.password
-      });
+  if (!validateLogin()) return;
 
-      if (!res.success) {
-        setErrors({
-          general:
-            res.message ||
-            'Login failed. Please check your credentials and try again.'
-        });
-        return;
-      }
+  setIsLoading(true);
+  setErrors({});
 
-      if (res.requiresOTP) {
-        const createdAt =
-          typeof res.createdAt === 'number'
-            ? res.createdAt
-            : Number(res.createdAt ?? Date.now());
+  try {
+    const res = await handleLogin(credentials);
 
-        setOtpPhone(res.phone || '');
-        setOtpHash(res.otpHash || '');
-        setOtpCreatedAt(createdAt);
-        setShowOTP(true);
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-
+    if (!res.success) {
       setErrors({
-        general:
-          'Something went wrong while signing in. Please check your connection and try again.'
+        general: res.message || 'Invalid login credentials.',
       });
-    } finally {
-      setIsLoading(false);
+      return;
     }
-  };
+
+  } catch (error) {
+    console.error('Login submission error:', error);
+
+    setErrors({
+      general: 'Something went wrong. Please try again.',
+    });
+
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
   const handleForgotPassword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,7 +414,7 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* 2FA LOGIN OTP MODAL */}
-      <OTPModal
+      {/* <OTPModal
         isOpen={showOTP}
         phone={otpPhone}
         purpose="login"
@@ -459,7 +434,7 @@ export const LoginPage: React.FC = () => {
             setErrors({ general: result.message });
           }
         }}
-      />
+      /> */}
     </AuthLayout>
   );
 };

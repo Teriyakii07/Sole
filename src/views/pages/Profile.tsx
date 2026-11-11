@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { type ProfileTab, useProfileController } from '../../controllers/profileControllers';
 import { formatPrice } from '../../models/Cart'
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import type { Profile as ProfileData, Address, AddressFormData } from '../../models/Profile';
+import { handleLogout } from '../../controllers/authController';
 
 const inputClass = 'w-full min-w-0 rounded-lg border border-[#DDE1E7] bg-white px-3 py-3 text-xs outline-none focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
 const primaryClass = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-[#123A8C] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#0D2D70]'
@@ -18,6 +19,13 @@ function Icon({ name, size = 21 }: { name: string; size?: number }) {
     save: <><path d="M4 3h14l3 3v15H3V3Z"/><path d="M7 3v7h10V3M7 21v-8h10v8"/></>,
     check: <><circle cx="12" cy="12" r="10"/><path d="m7 12 3 3 7-7"/></>,
     arrow: <path d="m9 18 6-6-6-6"/>,
+    logout: (
+  <>
+    <path d="M10 17l5-5-5-5" />
+    <path d="M15 12H3" />
+    <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
+  </>
+),
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
@@ -504,6 +512,33 @@ function PersonalInformation({
 
 export default function Profile() {
   const c = useProfileController()
+
+    const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+
+  const onLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    setLogoutError('');
+
+    try {
+      const result = await handleLogout();
+
+      if (!result.success) {
+        setLogoutError(result.message || 'Unable to log out. Please try again.');
+        return;
+      }
+
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      setLogoutError('Something went wrong while logging out.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
   const count: Record<ProfileTab, number | null> = {
     personal: null, favorites: c.favorites.length, orders: c.orders.length, cart: c.totalItems,
   }
@@ -542,6 +577,29 @@ export default function Profile() {
             <span className="shrink-0 text-[#123A8C]"><Icon name="shield" size={20}/></span>
             <div><strong className="text-[11px]">Your account, your way.</strong><p className="mt-1 text-[10px] leading-5 text-[#666]">Keep your information updated for a smoother shopping experience.</p></div>
           </div>
+
+{/* Logout */}
+<div className="mt-5 border-t border-[#E5E7EB] pt-5">
+  {logoutError && (
+    <p role="alert" className="mb-3 rounded-lg bg-[#FFF0F1] p-3 text-xs text-[#B42332]">
+      {logoutError}
+    </p>
+  )}
+
+  <button
+    type="button"
+    onClick={onLogout}
+    disabled={isLoggingOut}
+    className="flex min-h-[46px] w-full items-center gap-3 rounded-xl border border-[#F2C8CC] px-4 py-3 text-xs font-bold text-[#D7192D] transition hover:bg-[#FFF0F1] disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    <Icon name="logout" size={19} />
+
+    <span>
+      {isLoggingOut ? 'Logging out...' : 'Logout'}
+    </span>
+  </button>
+</div>
+
         </aside>
 
 <section className="min-h-[470px] min-w-0 rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-sm sm:p-6 lg:p-[30px]">
