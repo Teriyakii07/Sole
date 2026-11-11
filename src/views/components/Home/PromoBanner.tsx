@@ -1,39 +1,47 @@
 
 import { ArrowRight } from 'lucide-react'
+import {
+  handleImageError,
+  heroSneakersImage,
+} from '../../../lib/imageFallback'
 
 export default function PromoBanner() {
   return (
-    <section className="grid min-h-[190px] overflow-hidden bg-[#d9d9d9] md:grid-cols-[1.15fr_0.85fr]">
-      <div className="relative flex flex-col justify-center bg-sole-blue px-7 py-8 text-white sm:px-12">
-        <p className="text-base font-light tracking-wide sm:text-lg">
+    <section className="relative grid min-h-[210px] grid-cols-[1.2fr_0.8fr] overflow-hidden bg-[#d9d9d9] sm:min-h-[240px]">
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-[68%] bg-[#173f8f] [clip-path:polygon(0_0,100%_0,83%_100%,0_100%)] sm:w-[64%]"
+      />
+
+      <div className="relative z-10 flex min-w-0 flex-col justify-center px-5 py-7 text-white sm:px-10 lg:px-12">
+        <p className="text-sm font-light tracking-wide sm:text-base">
           JUST DROPPED
         </p>
 
-        <h2 className="text-2xl leading-tight font-black sm:text-3xl">
-          NIKE DUNK LOW
+        <h2 className="line-clamp-2 text-xl leading-tight font-black sm:text-3xl">
+          BLUE HIGH-TOP SNEAKERS
         </h2>
 
-        <p className="text-sm sm:text-base">
-          Timeless style. Everyday comfort.
+        <p className="line-clamp-2 text-xs sm:text-sm">
+          Discover your next favorite pair.
         </p>
 
         <a
           href="/shop"
-          className="mt-7 flex w-full max-w-[220px] items-center justify-between bg-white px-5 py-4 text-xs font-bold text-sole-blue transition hover:bg-gray-100"
+          className="mt-5 flex w-full max-w-[190px] items-center justify-between bg-white px-4 py-3 text-[10px] font-bold text-[#173f8f] transition hover:bg-gray-100 sm:mt-6 sm:px-6 sm:py-4 sm:text-xs"
         >
           SHOP NOW
-          <ArrowRight size={18} />
+          <ArrowRight size={16} />
         </a>
-
-        <div className="absolute -right-5 top-0 hidden h-full w-10 skew-x-[-20deg] bg-[#d9d9d9] md:block" />
       </div>
 
-      <div className="flex min-h-[180px] items-center justify-center p-5">
+      <div className="relative z-10 flex min-h-[180px] items-center justify-center py-4 pl-0 pr-3 sm:min-h-[220px] sm:pr-8">
         <img
-          src="/images/promo-dunk-low.png"
-          alt="Black and white low-top sneakers"
-          className="max-h-[210px] w-full max-w-[400px] object-contain"
+          src={heroSneakersImage}
+          alt="Blue, white, and black high-top sneakers"
+          className="max-h-[160px] w-full max-w-[320px] object-contain mix-blend-multiply sm:max-h-[205px]"
           loading="lazy"
+          onError={handleImageError}
         />
       </div>
     </section>

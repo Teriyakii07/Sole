@@ -8,6 +8,10 @@ import {
   X,
 } from 'lucide-react'
 
+import { useCart } from '../../../context/Cartcontext'
+import { useFavorites } from '../../../context/Favoritescontext'
+import soleLogo from '../../../assets/images/solelogo.png'
+
 const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Shop', href: '/shop' },
@@ -15,8 +19,19 @@ const navLinks = [
   { label: 'Contact', href: '/contact' },
 ]
 
+function Badge({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D7192D] px-1 text-[10px] font-bold text-white">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 export default function Navbar() {
   const navigate = useNavigate()
+  const { totalItems } = useCart()
+  const { favorites } = useFavorites()
   const [activeLink, setActiveLink] = useState('Home')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -27,7 +42,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" aria-label="SOLE home" className="shrink-0">
           <img
-            src="assets/images/sole-logo.png"
+            src={soleLogo}
             alt="SOLE"
             className="h-14 w-24 object-contain sm:w-28"
           />
@@ -53,7 +68,6 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3 sm:gap-5">
-          {/* UPDATED: Navigates to /search using React Router */}
           <button
             type="button"
             aria-label="Search products"
@@ -66,19 +80,21 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Favorites"
-            className="transition hover:text-sole-blue"
+            className="relative transition hover:text-sole-blue"
             onClick={() => navigate('/favorites')}
           >
             <Heart size={25} strokeWidth={2.4} />
+            <Badge count={favorites.length} />
           </button>
 
           <button
             type="button"
             aria-label="Shopping bag"
-            className="transition hover:text-sole-blue"
+            className="relative transition hover:text-sole-blue"
             onClick={() => navigate('/cart')}
           >
             <ShoppingBag size={25} strokeWidth={2.4} />
+            <Badge count={totalItems} />
           </button>
 
           <button

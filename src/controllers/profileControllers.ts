@@ -7,7 +7,6 @@ import {
   type Profile,
   type Address,
   type AddressFormData,
-  type Favorite,
   type Order,
 } from '../models/Profile';
 
@@ -28,10 +27,6 @@ export function useProfileController() {
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [addresses, setAddresses] = useState<Address[]>([]);
 
-  const [favorites, setFavorites] = useState<Favorite[]>(() =>
-    load('sole_favorites', [])
-  );
-
   const [orders] = useState<Order[]>(() => load('sole_orders', []));
 
   const [loading, setLoading] = useState(true);
@@ -41,7 +36,13 @@ export function useProfileController() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const { cart, totalItems, subtotal } = useCartController();
+  const {
+    cart,
+    totalItems,
+    subtotal,
+    changeQuantity,
+    removeItem,
+  } = useCartController();
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -355,12 +356,6 @@ export function useProfileController() {
     }
   }
 
-  function removeFavorite(id: string) {
-    const updated = favorites.filter(item => item.id !== id);
-    setFavorites(updated);
-    localStorage.setItem('sole_favorites', JSON.stringify(updated));
-  }
-
   function selectTab(next: ProfileTab) {
     setTab(next);
     setSaved(false);
@@ -386,11 +381,11 @@ export function useProfileController() {
     deleteAddress,
     setDefaultAddress,
     emptyAddress,
-    favorites,
-    removeFavorite,
     orders,
     cart,
     totalItems,
     subtotal,
+    changeQuantity,
+    removeItem,
   };
 }

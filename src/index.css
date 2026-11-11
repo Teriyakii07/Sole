@@ -1,7 +1,7 @@
 
 @import "tailwindcss";
 
-@theme {
+:root {
   --color-sole-blue: #103b91;
   --color-sole-red: #bd171e;
   --color-sole-navy: #0b3288;

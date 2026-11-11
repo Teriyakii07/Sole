@@ -6,11 +6,9 @@ import { formatPrice } from '../../models/Cart'
 export default function ShoppingCartView() {
   const {
     cart,
-    inputQuantities,
     totalItems,
     subtotal,
-    handleQuantityInputChange,
-    updateQuantity,
+    changeQuantity,
     removeItem,
   } = useCartController()
 
@@ -85,9 +83,7 @@ export default function ShoppingCartView() {
               <CartItemView
                 key={item.id}
                 item={item}
-                inputQuantity={inputQuantities[item.id] ?? item.quantity}
-                onQuantityChange={handleQuantityInputChange}
-                onUpdate={updateQuantity}
+                onQuantityChange={changeQuantity}
                 onRemove={removeItem}
               />
             ))}

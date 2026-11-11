@@ -1,18 +1,36 @@
-
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingBag } from 'lucide-react';
+import { Heart, Image as ImageIcon, ShoppingBag } from 'lucide-react';
 
 import { getProductById } from '../../controllers/productControllers';
+import { supabase } from '../../lib/supabaseClient';
 import type { Product } from '../../models/Product';
+import { handleImageError } from '../../lib/imageFallback';
+import { useCart } from '../../context/Cartcontext';
+import { useFavorites } from '../../context/Favoritescontext';
+
+interface Variant {
+  id: string;
+  size_label: string;
+  size_system: string;
+  color: string;
+  price: number;
+  stock_quantity: number;
+}
 
 export default function ProductCatalog() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [added, setAdded] = useState(false);
+  const [sizeError, setSizeError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -20,6 +38,8 @@ export default function ProductCatalog() {
     async function loadProduct() {
       setLoading(true);
       setError('');
+      setSelectedVariantId(null);
+      setSizeError(false);
 
       try {
         if (!id) {
@@ -27,10 +47,28 @@ export default function ProductCatalog() {
           return;
         }
 
-        const result = await getProductById(id);
+        const [result, variantResult] = await Promise.all([
+          getProductById(id),
+          supabase
+            .from('product_variants')
+            .select('id, size_label, size_system, color, price, stock_quantity')
+            .eq('product_id', id)
+            .eq('is_active', true),
+        ]);
+
+        if (variantResult.error) {
+          console.error('Unable to load sizes:', variantResult.error);
+        }
 
         if (isMounted) {
           setProduct(result);
+          setVariants(
+            ((variantResult.data ?? []) as Variant[])
+              .map((v) => ({ ...v, price: Number(v.price) }))
+              .sort((a, b) =>
+                a.size_label.localeCompare(b.size_label, undefined, { numeric: true })
+              )
+          );
         }
       } catch (err) {
         if (isMounted) {
@@ -53,6 +91,11 @@ export default function ProductCatalog() {
       isMounted = false;
     };
   }, [id]);
+
+  const selectedVariant = useMemo(
+    () => variants.find((v) => v.id === selectedVariantId) ?? null,
+    [variants, selectedVariantId]
+  );
 
   if (loading) {
     return (
@@ -83,6 +126,39 @@ export default function ProductCatalog() {
     );
   }
 
+  const favorited = isFavorite(product.id);
+
+  const outOfStock =
+    variants.length > 0
+      ? variants.every((v) => v.stock_quantity === 0)
+      : product.stockCount === 0;
+
+  const displayPrice = selectedVariant
+    ? selectedVariant.price
+    : variants.length > 0
+      ? Math.min(...variants.map((v) => v.price))
+      : product.price;
+
+  async function handleAddToCart(): Promise<boolean> {
+    if (!selectedVariant) {
+      setSizeError(true);
+      return false;
+    }
+    await addToCart(selectedVariant.id);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+    return true;
+  }
+
+  async function handleBuyNow() {
+    if (!selectedVariant) {
+      setSizeError(true);
+      return;
+    }
+    await addToCart(selectedVariant.id);
+    navigate('/cart');
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
       <div className="grid grid-cols-1 items-start gap-8 rounded-2xl bg-slate-100 p-6 md:grid-cols-2 md:p-10">
@@ -97,27 +173,31 @@ export default function ProductCatalog() {
                   key={idx}
                   className="flex items-center justify-center rounded-xl bg-white p-3 shadow-sm"
                 >
-                 
-<img
-  src={product.image}
-  alt={product.name}
-  className="w-full max-w-md object-contain"
-  onError={(e) => {
-    e.currentTarget.onerror = null;
-    e.currentTarget.src = '/images/product-placeholder.png';
-  }}
-/>
-
+                  {img ? (
+                    <img
+                      src={img}
+                      alt={`${product.name} ${idx + 1}`}
+                      className="w-full max-w-md object-contain"
+                      onError={handleImageError}
+                    />
+                  ) : (
+                    <ImageIcon aria-hidden="true" className="text-gray-300" size={48} />
+                  )}
                 </div>
               )
             )
           ) : (
             <div className="col-span-2 flex items-center justify-center rounded-xl bg-white p-6 shadow-sm">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full max-w-md object-contain"
-              />
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full max-w-md object-contain"
+                  onError={handleImageError}
+                />
+              ) : (
+                <ImageIcon aria-hidden="true" className="text-gray-300" size={48} />
+              )}
             </div>
           )}
         </div>
@@ -138,22 +218,66 @@ export default function ProductCatalog() {
                 • STYLE: {product.styleCode || 'Not specified'}
               </li>
               <li>
-                • COLOUR: {product.color || 'Not specified'}
+                • COLOUR: {selectedVariant?.color || product.color || 'Not specified'}
               </li>
               <li>
                 • CATEGORY: {product.category || 'Not specified'}
               </li>
             </ul>
 
-            {typeof product.stockCount === 'number' &&
-              product.stockCount > 0 &&
-              product.stockCount <= 3 && (
+            {/* Size picker */}
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-extrabold uppercase text-slate-900">
+                Select size
+              </p>
+
+              {variants.length === 0 ? (
+                <p className="text-xs font-semibold text-red-600">
+                  No sizes available right now.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {variants.map((v) => {
+                    const soldOut = v.stock_quantity === 0;
+                    const selected = v.id === selectedVariantId;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        disabled={soldOut}
+                        onClick={() => {
+                          setSelectedVariantId(v.id);
+                          setSizeError(false);
+                        }}
+                        className={`min-w-[56px] rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                          selected
+                            ? 'border-[#1E2E78] bg-[#1E2E78] text-white'
+                            : 'border-slate-300 bg-white text-slate-800 hover:border-[#1E2E78]'
+                        } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:line-through`}
+                      >
+                        {v.size_system} {v.size_label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {sizeError && (
+                <p className="mt-2 text-xs font-bold text-red-600">
+                  Please select a size first.
+                </p>
+              )}
+            </div>
+
+            {selectedVariant &&
+              selectedVariant.stock_quantity > 0 &&
+              selectedVariant.stock_quantity <= 3 && (
                 <p className="mt-4 text-xs font-extrabold uppercase tracking-wide text-blue-900">
-                  ONLY {product.stockCount} LEFT — MAKE IT YOURS!
+                  ONLY {selectedVariant.stock_quantity} LEFT — MAKE IT YOURS!
                 </p>
               )}
 
-            {product.stockCount === 0 && (
+            {outOfStock && (
               <p className="mt-4 text-xs font-extrabold uppercase tracking-wide text-red-600">
                 OUT OF STOCK
               </p>
@@ -161,11 +285,11 @@ export default function ProductCatalog() {
 
             <div className="mt-6">
               <p className="text-sm font-extrabold uppercase text-slate-900">
-                {product.color || product.name}
+                {selectedVariant?.color || product.color || product.name}
               </p>
 
               <p className="text-lg font-black text-slate-900">
-                ₱{product.price.toLocaleString('en-PH')}
+                ₱{displayPrice.toLocaleString('en-PH')}
               </p>
             </div>
           </div>
@@ -173,32 +297,37 @@ export default function ProductCatalog() {
           {/* Action Buttons */}
           <div className="flex items-center gap-3 pt-4">
             <button
-              disabled={product.stockCount === 0}
-              onClick={() => alert(`Buying ${product.name} now!`)}
+              disabled={outOfStock}
+              onClick={() => void handleBuyNow()}
               className="flex-1 rounded-xl bg-[#1E2E78] py-3.5 text-center text-sm font-extrabold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#16235e] disabled:cursor-not-allowed disabled:bg-gray-400"
             >
               BUY NOW
             </button>
 
             <button
-              disabled={product.stockCount === 0}
-              onClick={() => alert(`${product.name} added to cart!`)}
+              disabled={outOfStock}
+              onClick={() => void handleAddToCart()}
               className="rounded-xl bg-[#1E2E78] p-3.5 text-white shadow-lg transition-all hover:bg-[#16235e] disabled:cursor-not-allowed disabled:bg-gray-400"
-              title="Add to Cart"
+              title={added ? 'Added!' : 'Add to Cart'}
+              aria-label="Add to cart"
             >
               <ShoppingBag size={20} />
             </button>
 
             <button
-              onClick={() =>
-                alert(`${product.name} added to favorites!`)
-              }
+              onClick={() => void toggleFavorite(product)}
+              aria-pressed={favorited}
               className="rounded-xl bg-[#1E2E78] p-3.5 text-white shadow-lg transition-all hover:bg-[#16235e]"
-              title="Add to Favorites"
+              title={favorited ? 'Remove from Favorites' : 'Add to Favorites'}
+              aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
             >
-              <Heart size={20} />
+              <Heart size={20} fill={favorited ? '#ffffff' : 'none'} />
             </button>
           </div>
+
+          {added && (
+            <p className="text-xs font-bold text-[#1E2E78]">Added to your cart.</p>
+          )}
         </div>
       </div>
     </main>

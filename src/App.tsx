@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Routes,
@@ -8,6 +7,8 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/Cartcontext';
+import { FavoritesProvider } from './context/Favoritescontext';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
@@ -18,6 +19,7 @@ import Footer from './views/components/Home/Footer';
 
 import HomePage from './views/pages/HomePage';
 import ShoppingCartView from './views/pages/Cart';
+import FavoritesPage from './views/pages/Favorites';
 import Profile from './views/pages/Profile';
 import AboutUs from './views/pages/Aboutus';
 import ContactUs from './views/pages/ContactUs';
@@ -51,36 +53,44 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            {/* Guest-only routes */}
-            <Route element={<GuestRoute />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
-            </Route>
+        <CartProvider>
+          <FavoritesProvider>
+            <Routes>
+              <Route element={<MainLayout />}>
+                {/* Guest-only routes */}
+                <Route element={<GuestRoute />}>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignUpPage />} />
+                </Route>
 
-            {/* Admin-only routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminDashboard />} />
+                {/* Admin-only routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<AdminRoute />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                  </Route>
+                </Route>
+
+                {/* Logged-in only */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/profile" element={<Profile />} />
+                </Route>
+
+                {/* Public pages (cart and favorites open for everyone) */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/shop" element={<div>Shop page coming soon.</div>} />
+                <Route path="/cart" element={<ShoppingCartView />} />
+                <Route path="/favorites" element={<FavoritesPage />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/faqs" element={<FAQPage />} />
+                <Route path="/product/:id" element={<ProductCatalog />} />
+
+                {/* Unknown routes */}
+                <Route path="*" element={<div>Page not found.</div>} />
               </Route>
-            </Route>
-
-            {/* Customer/public pages */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/shop" element={<div>Shop page coming soon.</div>} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/contact" element={<ContactUs />} />
-            <Route path="/favorites" element={<div>Favorites page coming soon.</div>} />
-            <Route path="/cart" element={<ShoppingCartView />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/faqs" element={<FAQPage />} />
-            <Route path="/product/:id" element={<ProductCatalog />} />
-
-            {/* Unknown routes */}
-            <Route path="*" element={<div>Page not found.</div>} />
-          </Route>
-        </Routes>
+            </Routes>
+          </FavoritesProvider>
+        </CartProvider>
       </BrowserRouter>
     </AuthProvider>
   );

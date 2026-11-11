@@ -1,27 +1,15 @@
 export interface CartItem {
-  id: string;
+  id: string;        // cart_items.id
+  variantId: string; // product_variants.id
+  productId: string;
   name: string;
-  price: number;
   image: string;
+  size: string;
+  color: string;
+  price: number;
   quantity: number;
+  stock: number;
 }
-
-export const initialCartData: CartItem[] = [
-  {
-    id: '1',
-    name: 'Air Jordan 1 Retro High OG',
-    price: 9895.00,
-    image: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=400',
-    quantity: 1,
-  },
-  {
-    id: '2',
-    name: 'Nike Dunk Low Retro',
-    price: 5495.00,
-    image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&q=80&w=400',
-    quantity: 2,
-  },
-];
 
 export const calculateTotalItems = (cart: CartItem[]): number =>
   cart.reduce((sum, item) => sum + item.quantity, 0);

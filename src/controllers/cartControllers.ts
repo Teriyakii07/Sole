@@ -1,55 +1,21 @@
-import { useState } from 'react';
-import {
-  type CartItem,
-  initialCartData,
-  calculateTotalItems,
-  calculateSubtotal
-} from '../models/Cart';
+import { useCart } from '../context/Cartcontext';
 
 export function useCartController() {
-  const [cart, setCart] = useState<CartItem[]>(initialCartData);
-  const [inputQuantities, setInputQuantities] = useState<Record<string, number | string>>(
-    initialCartData.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})
-  );
+  const { cart, totalItems, subtotal, setQuantity, removeItem } = useCart();
 
-  const handleQuantityInputChange = (id: string, value: string): void => {
-    setInputQuantities((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-  };
+  const changeQuantity = (id: string, quantity: number): void => {
+    const item = cart.find((cartItem) => cartItem.id === id);
+    if (!item) return;
 
-  const updateQuantity = (id: string): void => {
-    const qty = parseInt(String(inputQuantities[id]), 10);
-    if (isNaN(qty) || qty <= 0) {
-      removeItem(id);
-    } else {
-      const validQty = Math.min(qty, 99);
-      setCart((prevCart) =>
-        prevCart.map((item) =>
-          item.id === id ? { ...item, quantity: validQty } : item
-        )
-      );
-      setInputQuantities((prev) => ({ ...prev, [id]: validQty }));
-    }
-  };
-
-  const removeItem = (id: string): void => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
-    setInputQuantities((prev) => {
-      const updated = { ...prev };
-      delete updated[id];
-      return updated;
-    });
+    const max = item.stock > 0 ? Math.min(99, item.stock) : 99;
+    void setQuantity(id, Math.min(max, Math.max(1, quantity)));
   };
 
   return {
     cart,
-    inputQuantities,
-    totalItems: calculateTotalItems(cart),
-    subtotal: calculateSubtotal(cart),
-    handleQuantityInputChange,
-    updateQuantity,
-    removeItem,
+    totalItems,
+    subtotal,
+    changeQuantity,
+    removeItem: (id: string) => void removeItem(id),
   };
 }

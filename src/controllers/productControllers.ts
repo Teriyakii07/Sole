@@ -3,21 +3,6 @@ import { supabase } from '../lib/supabaseClient';
 import type { Product, HomeCategory } from '../models/Product';
 import { getProductImageUrl } from './productImageController';
 
-const FALLBACK_CATEGORY_IMAGE =
-  '/images/products/puma-crimson-gum.png';
-
-// Categories do not currently have an image_url column.
-// Keep these local category images until category images
-// are added to Supabase.
-const categoryImages: Record<string, string> = {
-  sneakers: '/images/products/puma-crimson-gum.png',
-  oxford: '/images/products/oxford.png',
-  'chelsea-boots': '/images/products/chelsea-boots.png',
-  loafers: '/images/products/loafers.png',
-  'running-shoes': '/images/products/running-shoes.png',
-  espadrilles: '/images/products/espadrilles.png',
-};
-
 export async function getHomepageCategories(): Promise<HomeCategory[]> {
   const { data, error } = await supabase
     .from('categories')
@@ -33,9 +18,7 @@ export async function getHomepageCategories(): Promise<HomeCategory[]> {
     id: category.id,
     name: category.name,
     slug: category.slug,
-    image:
-      categoryImages[category.slug] ??
-      FALLBACK_CATEGORY_IMAGE,
+    image: '',
   }));
 }
 

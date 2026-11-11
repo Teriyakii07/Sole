@@ -1,9 +1,9 @@
-
-import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import type { Product } from '../../../models/Product';
 import ProductCard from './ProductCard';
+import { useFavorites } from '../../../context/Favoritescontext';
 
 interface NewArrivalsProps {
   products: Product[];
@@ -14,21 +14,8 @@ export default function NewArrivals({
   products,
   loading,
 }: NewArrivalsProps) {
-  const [favorites, setFavorites] = useState<(string | number)[]>([]);
-  const [cart, setCart] = useState<Product[]>([]);
-
-  function toggleFavorite(id: string | number) {
-    setFavorites((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
-    );
-  }
-
-  function addToCart(product: Product) {
-    setCart((current) => [...current, product]);
-    window.alert(`${product.name} added to cart!`);
-  }
+  const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   return (
     <section className="px-5 pb-8 pt-2 sm:px-8">
@@ -54,23 +41,17 @@ export default function NewArrivals({
           No new arrivals available right now.
         </p>
       ) : (
-        <div className="mx-auto grid max-w-[750px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-[1050px] grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
           {products.slice(0, 8).map((product) => (
             <ProductCard
               key={product.id}
               product={product}
-              isFavorite={favorites.includes(product.id)}
-              onToggleFavorite={toggleFavorite}
-              onAddToCart={addToCart}
+              isFavorite={isFavorite(product.id)}
+              onToggleFavorite={() => void toggleFavorite(product)}
+              onAddToCart={(p) => navigate(`/product/${p.id}`)}
             />
           ))}
         </div>
-      )}
-
-      {cart.length > 0 && (
-        <p className="mt-3 text-right text-xs text-gray-500">
-          Items added this session: {cart.length}
-        </p>
       )}
     </section>
   );

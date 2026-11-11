@@ -4,6 +4,9 @@ import { formatPrice } from '../../models/Cart'
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import type { Profile as ProfileData, Address, AddressFormData } from '../../models/Profile';
 import { handleLogout } from '../../controllers/authController';
+import { useFavorites } from '../../context/Favoritescontext';
+import ProductCard from '../components/Home/ProductCard';
+import { CartItemView } from '../components/Cart/CartItemView';
 
 const inputClass = 'w-full min-w-0 rounded-lg border border-[#DDE1E7] bg-white px-3 py-3 text-xs outline-none focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100'
 const primaryClass = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-[#123A8C] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#0D2D70]'
@@ -512,8 +515,8 @@ function PersonalInformation({
 
 export default function Profile() {
   const c = useProfileController()
-
-    const navigate = useNavigate();
+  const { favorites, loading: favoritesLoading, toggleFavorite } = useFavorites()
+  const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
 
@@ -540,7 +543,7 @@ export default function Profile() {
     }
   };
   const count: Record<ProfileTab, number | null> = {
-    personal: null, favorites: c.favorites.length, orders: c.orders.length, cart: c.totalItems,
+    personal: null, favorites: favorites.length, orders: c.orders.length, cart: c.totalItems,
   }
   const active = tabs.find(t => t.id === c.tab)!
   const descriptions: Record<ProfileTab, string> = {
@@ -653,12 +656,70 @@ export default function Profile() {
         />
       )}
 
-{/* favorites */}
-          {c.tab === 'favorites' && (c.favorites.length === 0 ? <EmptyState icon="heart" title="No favorites yet" message="Save the sneakers you love so you can find them easily later." action="Explore Sneakers"/> : <div className="grid grid-cols-2 gap-3 sm:gap-5">{c.favorites.map(f => <article key={f.id} className="overflow-hidden rounded-xl border border-gray-200"><div className="flex h-[130px] items-center justify-center bg-[#F7F8FA] p-3 sm:h-[175px]">{f.image ? <img src={f.image} alt={f.name} className="h-full w-full object-contain"/> : <Icon name="bag" size={35}/>}</div><div className="p-3"><h3 className="break-words text-xs font-bold">{f.name}</h3><p className="mt-2 text-sm font-extrabold text-[#D7192D]">{formatPrice(f.price)}</p><button type="button" onClick={() => c.removeFavorite(f.id)} className="mt-4 w-full rounded-lg bg-[#FFF0F1] py-3 text-xs font-bold text-[#D7192D] hover:bg-[#FFE1E4]">Remove</button></div></article>)}</div>)}
+      {/* FAVORITES */}
+      {c.tab === 'favorites' && (
+        favoritesLoading ? (
+          <div className="flex min-h-[300px] items-center justify-center text-sm text-[#666]">
+            Loading favorites...
+          </div>
+        ) : favorites.length === 0 ? (
+          <EmptyState
+            icon="heart"
+            title="No favorites yet"
+            message="Save the sneakers you love so you can find them easily later."
+            action="Explore Sneakers"
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5">
+            {favorites.map(product => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFavorite
+                onToggleFavorite={() => void toggleFavorite(product)}
+                onAddToCart={productToAdd =>
+                  navigate(`/product/${productToAdd.id}`)
+                }
+              />
+            ))}
+          </div>
+        )
+      )}
 {/* orders */}
           {c.tab === 'orders' && (c.orders.length === 0 ? <EmptyState icon="package" title="No orders yet" message="Your completed and ongoing orders will appear here." action="Start Shopping"/> : <div className="space-y-3">{c.orders.map(o => <article key={o.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 p-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FC] text-[#123A8C]"><Icon name="package"/></div><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-bold">Order #{o.id}</h3><p className="mt-1 text-xs text-[#666]">Date: {o.date}</p><p className="mt-1 text-xs font-bold">Total: {formatPrice(o.total)}</p></div><span className="rounded-full bg-[#EAF6EE] px-3 py-2 text-[10px] font-bold text-[#247440]">{o.status || 'Processing'}</span></article>)}</div>)}
-{/* cart */}
-          {c.tab === 'cart' && (c.cart.length === 0 ? <EmptyState icon="bag" title="Your cart is empty" message="Find your next favorite pair and add it to your cart." action="Browse Sneakers"/> : <><div className="space-y-3">{c.cart.map(item => <article key={item.id} className="flex min-w-0 items-center gap-4 rounded-xl border border-gray-200 p-3"><img src={item.image} alt={item.name} className="h-[70px] w-[70px] shrink-0 rounded-lg bg-[#F7F8FA] object-contain sm:h-[85px] sm:w-[85px]"/><div className="min-w-0"><h3 className="break-words text-[13px] font-bold">{item.name}</h3><p className="mt-1 text-xs text-[#666]">Quantity: {item.quantity}</p><strong className="mt-1 block text-[13px] text-[#D7192D]">{formatPrice(item.price * item.quantity)}</strong></div></article>)}</div><div className="mt-6 flex items-center justify-between gap-3 border-t border-gray-200 pt-5"><span className="text-sm text-[#666]">Estimated Total</span><strong className="font-montserrat text-xl text-[#D7192D]">{formatPrice(c.subtotal)}</strong></div><Link to="/cart" className={`${primaryClass} mt-5 flex w-full gap-2`}>View Full Cart <Icon name="arrow" size={17}/></Link></>)}
+      {/* CART */}
+      {c.tab === 'cart' && (
+        c.cart.length === 0 ? (
+          <EmptyState
+            icon="bag"
+            title="Your cart is empty"
+            message="Find your next favorite pair and add it to your cart."
+            action="Browse Sneakers"
+          />
+        ) : (
+          <>
+            <section>
+              {c.cart.map(item => (
+                <CartItemView
+                  key={item.id}
+                  item={item}
+                  onQuantityChange={c.changeQuantity}
+                  onRemove={c.removeItem}
+                />
+              ))}
+            </section>
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-gray-200 pt-5">
+              <span className="text-sm text-[#666]">Estimated Total</span>
+              <strong className="font-montserrat text-xl text-[#D7192D]">
+                {formatPrice(c.subtotal)}
+              </strong>
+            </div>
+            <Link to="/cart" className={`${primaryClass} mt-5 flex w-full gap-2`}>
+              View Full Cart <Icon name="arrow" size={17} />
+            </Link>
+          </>
+        )
+      )}
           </>
   )}
         </section>
