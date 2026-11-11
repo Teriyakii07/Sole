@@ -15,6 +15,20 @@ const categoryImages: Record<string, string> = {
   espadrilles: '/images/products/espadrilles.png',
 };
 
+// GET NAME FROM SUPABASE RELATIONSHIP
+function getRelationName(relation: unknown): string {
+  if (Array.isArray(relation)) {
+    return relation[0]?.name?.trim() ?? '';
+  }
+
+  if (relation && typeof relation === 'object' && 'name' in relation) {
+    const name = relation.name;
+    return typeof name === 'string' ? name.trim() : '';
+  }
+
+  return '';
+}
+
 // GET HOMEPAGE CATEGORIES
 export async function getHomepageCategories(): Promise<HomeCategory[]> {
   const { data, error } = await supabase
@@ -72,46 +86,41 @@ export async function getHomepageProducts(): Promise<Product[]> {
     throw new Error(`Unable to load products: ${error.message}`);
   }
 
-  const products: (Product | null)[] = (data ?? []).map(
-    (item): Product | null => {
-      const availableVariants = (item.product_variants ?? []).filter(
-        (variant) =>
-          variant.is_active &&
-          Number(variant.stock_quantity) > 0
-      );
+  const products: (Product | null)[] = (data ?? []).map((item): Product | null => {
+    const availableVariants = (item.product_variants ?? []).filter(
+      (variant) =>
+        variant.is_active &&
+        Number(variant.stock_quantity) > 0
+    );
 
-      if (availableVariants.length === 0) {
-        return null;
-      }
-
-      const prices = availableVariants.map((variant) =>
-        Number(variant.price)
-      );
-
-      const lowestPrice = Math.min(...prices);
-
-      const totalStock = availableVariants.reduce(
-        (total, variant) =>
-          total + Number(variant.stock_quantity),
-        0
-      );
-
-      return {
-        id: item.id,
-        name: item.name,
-
-        // FIXED: Access the first related brand
-        brand: item.brands?.[0]?.name ?? '',
-
-        price: lowestPrice,
-        image: getProductImageUrl(item.image_url),
-        category: item.categories?.[0]?.name ?? '',
-        description: item.description ?? '',
-        stockCount: totalStock,
-        createdAt: item.created_at,
-      };
+    if (availableVariants.length === 0) {
+      return null;
     }
-  );
+
+    const prices = availableVariants.map((variant) =>
+      Number(variant.price)
+    );
+
+    const lowestPrice = Math.min(...prices);
+
+    const totalStock = availableVariants.reduce(
+      (total, variant) =>
+        total + Number(variant.stock_quantity),
+      0
+    );
+
+    return {
+      id: item.id,
+      name: item.name,
+      brand: getRelationName(item.brands),
+      price: lowestPrice,
+      image: getProductImageUrl(item.image_url),
+      category: getRelationName(item.categories),
+      description: item.description ?? '',
+      stockCount: totalStock,
+      createdAt: item.created_at,
+    };
+  });
 
   return products.filter(
     (product): product is Product => product !== null
@@ -189,16 +198,10 @@ export async function getProductById(
   return {
     id: data.id,
     name: data.name,
-
-    // FIXED: Access the first related brand
-    brand: data.brands?.[0]?.name ?? '',
-
+    brand: getRelationName(data.brands),
     price: lowestPrice,
     image: getProductImageUrl(data.image_url),
-
-    // FIXED: Access the first related category
-    category: data.categories?.[0]?.name ?? '',
-
+    category: getRelationName(data.categories),
     styleCode: firstVariant?.sku ?? '',
     color: firstVariant?.color ?? '',
     description: data.description ?? '',
