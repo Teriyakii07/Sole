@@ -8,7 +8,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-import { handleSignUp } from '../../controllers/authController';
+import { handleSignUp, handleLogout } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
 import { sendPhilSMSOTP } from "../../controllers/otpController";
@@ -414,21 +414,46 @@ const [otpPhone, setOtpPhone] = useState('');
       </form>
 
       {/* OTP Verification Modal */}
-      <OTPModal
+      
+{/* OTP Verification Modal */}
+<OTPModal
   isOpen={showOTP}
   phone={otpPhone}
   purpose="REGISTRATION"
   hash={otpHash}
   createdAt={otpCreatedAt}
   onClose={() => setShowOTP(false)}
-  onSuccess={() => {
-    setShowOTP(false);
+  onSuccess={async () => {
+    try {
+      // Close the OTP modal.
+      setShowOTP(false);
 
-    alert('Phone verification successful! Please log in.');
+      // End the temporary Supabase session created during signup.
+      const logoutResult = await handleLogout();
 
-    navigate('/login');
+      if (!logoutResult.success) {
+        setErrors({
+          general:
+            'Phone verified, but we could not complete sign-out. Please try logging in again.'
+        });
+        return;
+      }
+
+      alert('Phone verification successful! Please log in.');
+
+      // Navigate to the login page.
+      navigate('/login', { replace: true });
+
+    } catch (error) {
+      console.error('Post-registration verification error:', error);
+
+      setErrors({
+        general: 'Phone verification succeeded, but an error occurred. Please try logging in again.'
+      });
+    }
   }}
 />
+
 
     </AuthLayout>
   );

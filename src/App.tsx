@@ -54,10 +54,13 @@ function App() {
         <Routes>
           <Route element={<MainLayout />}>
             {/* Guest-only routes */}
+{/* Login is guest-only */}
             <Route element={<GuestRoute />}>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
             </Route>
+
+            {/* Signup must remain accessible until OTP verification */}
+            <Route path="/signup" element={<SignUpPage />} />
 
             {/* Admin-only routes */}
             <Route element={<ProtectedRoute />}>
