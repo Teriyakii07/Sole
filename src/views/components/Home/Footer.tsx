@@ -2,7 +2,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import solelogo from '../../../assets/images/solelogo.png';
 import instalogo from '../../../assets/images/instalogo.png';
 import facebooklogo from '../../../assets/images/facebooklogo.png';
 import xlogo from '../../../assets/images/xlogo.png';
@@ -38,13 +37,7 @@ export default function Footer() {
         {/* BRAND */}
         <div className="min-w-0">
           <Link to="/" className="inline-flex flex-col no-underline">
-            <img
-              src={solelogo}
-              alt="SOLE sneaker logo"
-              className="block h-auto w-[145px] max-w-full"
-            />
-
-            <span className="mt-[5px] text-[30px] font-black text-[#123A8C]">
+            <span className="text-[30px] font-black text-[#123A8C]">
               SOLE.
             </span>
           </Link>
@@ -53,8 +46,14 @@ export default function Footer() {
             Step into your style.
           </p>
 
+          {/* SOCIAL MEDIA */}
           <div className="mt-5 flex items-center gap-[18px]">
-            <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <a
+              href="https://www.instagram.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+            >
               <img
                 src={instalogo}
                 alt="Instagram"
@@ -62,7 +61,12 @@ export default function Footer() {
               />
             </a>
 
-            <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <a
+              href="https://www.facebook.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+            >
               <img
                 src={facebooklogo}
                 alt="Facebook"
@@ -70,7 +74,12 @@ export default function Footer() {
               />
             </a>
 
-            <a href="https://x.com/" target="_blank" rel="noopener noreferrer" aria-label="X">
+            <a
+              href="https://x.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="X"
+            >
               <img
                 src={xlogo}
                 alt="X"
@@ -86,8 +95,8 @@ export default function Footer() {
           <Link to="/shop" className={linkStyle}>New Arrivals</Link>
           <Link to="/shop" className={linkStyle}>Sneakers</Link>
           <Link to="/shop" className={linkStyle}>Running Shoes</Link>
-          <Link to="/shop" className={linkStyle}>Boots</Link>
-          <Link to="/shop" className={linkStyle}>Sale</Link>
+          <Link to="/shop" className={linkStyle}>Lifestyle Shoes</Link>
+          <Link to="/shop" className={linkStyle}>Streetwear Shoes</Link>
         </div>
 
         {/* HELP & SUPPORT */}

@@ -32,7 +32,7 @@ export default function Hero() {
         {/* Product image */}
         <div className="relative flex min-h-[150px] items-center justify-center lg:h-full">
           <img
-            src="/images/hero-jordan.png"
+            src="../../images/sneakers.png"
             alt="Red, white, and black high-top basketball sneaker"
             className="relative z-10 w-full max-w-[440px] object-contain drop-shadow-2xl"
           />

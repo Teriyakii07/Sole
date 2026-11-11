@@ -2,6 +2,7 @@
 export interface Product {
   id: string | number;
   name: string;
+  brand?: string;
   price: number;
   image: string;
   category: string;
@@ -11,6 +12,7 @@ export interface Product {
   description?: string;
   stockCount?: number;
   galleryImages?: string[];
+  createdAt?: string;
 }
 
 export interface HomeCategory {

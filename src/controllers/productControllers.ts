@@ -6,9 +6,6 @@ import { getProductImageUrl } from './productImageController';
 const FALLBACK_CATEGORY_IMAGE =
   '/images/products/puma-crimson-gum.png';
 
-// Categories do not currently have an image_url column.
-// Keep these local category images until category images
-// are added to Supabase.
 const categoryImages: Record<string, string> = {
   sneakers: '/images/products/puma-crimson-gum.png',
   oxford: '/images/products/oxford.png',
@@ -18,6 +15,7 @@ const categoryImages: Record<string, string> = {
   espadrilles: '/images/products/espadrilles.png',
 };
 
+// GET HOMEPAGE CATEGORIES
 export async function getHomepageCategories(): Promise<HomeCategory[]> {
   const { data, error } = await supabase
     .from('categories')
@@ -33,23 +31,28 @@ export async function getHomepageCategories(): Promise<HomeCategory[]> {
     id: category.id,
     name: category.name,
     slug: category.slug,
-    image:
-      categoryImages[category.slug] ??
-      FALLBACK_CATEGORY_IMAGE,
+    image: categoryImages[category.slug] ?? FALLBACK_CATEGORY_IMAGE,
   }));
 }
 
+// GET HOMEPAGE PRODUCTS
 export async function getHomepageProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select(`
       id,
       name,
+      brand_id,
       description,
       image_url,
       created_at,
       is_active,
       categories (
+        id,
+        name
+      ),
+      brands (
+        id,
         name
       ),
       product_variants (
@@ -77,7 +80,6 @@ export async function getHomepageProducts(): Promise<Product[]> {
           Number(variant.stock_quantity) > 0
       );
 
-      // Exclude products without available stock.
       if (availableVariants.length === 0) {
         return null;
       }
@@ -97,15 +99,16 @@ export async function getHomepageProducts(): Promise<Product[]> {
       return {
         id: item.id,
         name: item.name,
+
+        // FIXED: Access the first related brand
+        brand: item.brands?.[0]?.name ?? '',
+
         price: lowestPrice,
-
-        // Convert the Supabase Storage path into a public URL.
         image: getProductImageUrl(item.image_url),
-
         category: item.categories?.[0]?.name ?? '',
-        isNew: true,
         description: item.description ?? '',
         stockCount: totalStock,
+        createdAt: item.created_at,
       };
     }
   );
@@ -115,6 +118,7 @@ export async function getHomepageProducts(): Promise<Product[]> {
   );
 }
 
+// GET PRODUCT BY ID
 export async function getProductById(
   id: string
 ): Promise<Product | null> {
@@ -127,9 +131,16 @@ export async function getProductById(
     .select(`
       id,
       name,
+      brand_id,
       description,
       image_url,
+      created_at,
       categories (
+        id,
+        name
+      ),
+      brands (
+        id,
         name
       ),
       product_variants (
@@ -178,15 +189,20 @@ export async function getProductById(
   return {
     id: data.id,
     name: data.name,
-    price: lowestPrice,
 
-    // Convert the Supabase Storage path into a public URL.
+    // FIXED: Access the first related brand
+    brand: data.brands?.[0]?.name ?? '',
+
+    price: lowestPrice,
     image: getProductImageUrl(data.image_url),
 
+    // FIXED: Access the first related category
     category: data.categories?.[0]?.name ?? '',
+
     styleCode: firstVariant?.sku ?? '',
     color: firstVariant?.color ?? '',
     description: data.description ?? '',
     stockCount: totalStock,
+    createdAt: data.created_at,
   };
 }

@@ -1,96 +1,182 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, NavLink, Link } from 'react-router-dom';
+
 import {
   Search,
   Heart,
   ShoppingBag,
   Menu,
   X,
-} from 'lucide-react'
+} from 'lucide-react';
 
-const navLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'Shop', href: '/shop' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-]
+import { supabase } from '../../../lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 
 export default function Navbar() {
-  const navigate = useNavigate()
-  const [activeLink, setActiveLink] = useState('Home')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  // GET LOGGED-IN USER AND LISTEN FOR AUTH CHANGES
+  useEffect(() => {
+    async function getLoggedInUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUser(user);
+    }
+
+    getLoggedInUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // CLOSE MOBILE MENU WHEN PAGE CHANGES
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // GET FIRST LETTER OF USER NAME
+  const userInitial = (
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email ||
+    '?'
+  )
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+  // NAVIGATION LINK STYLE
+  const getNavLinkClass = (isActive: boolean) =>
+    `relative py-2 text-base font-semibold transition-colors duration-300
+    after:absolute after:bottom-0 after:left-0 after:h-[2px]
+    after:w-full after:bg-[#123A8C]
+    after:transition-opacity after:duration-300
+    ${
+      isActive
+        ? 'text-[#123A8C] after:opacity-100'
+        : 'text-gray-700 after:opacity-0 hover:text-[#123A8C] hover:after:opacity-100'
+    }`;
+
+  // CHECK IF SHOP SHOULD BE ACTIVE
+  const isShopActive =
+    location.pathname === '/shop' ||
+    location.pathname.startsWith('/product/');
 
   return (
     <header className="relative z-50 w-full border-b border-gray-200 bg-white">
-      <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[80px] max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
 
-        {/* Logo */}
-        <Link to="/" aria-label="SOLE home" className="shrink-0">
-          <img
-            src="assets/images/sole-logo.png"
-            alt="SOLE"
-            className="h-14 w-24 object-contain sm:w-28"
-          />
+        {/* TEXT LOGO */}
+        <Link
+          to="/"
+          aria-label="SOLE home"
+          className="shrink-0 no-underline"
+        >
+          <span className="text-[34px] font-black tracking-tight text-[#123A8C] sm:text-[38px]">
+            SOLE.
+          </span>
         </Link>
 
-        {/* Desktop navigation */}
-        <nav className="hidden items-center gap-8 md:flex lg:gap-10">
-          {navLinks.map((link) => (
-            <Link
-              key={link.label}
-              to={link.href}
-              onClick={() => setActiveLink(link.label)}
-              className={`border-b-2 px-1 py-2 text-base transition ${
-                activeLink === link.label
-                  ? 'border-black text-black'
-                  : 'border-transparent text-gray-800 hover:border-gray-400'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+        {/* DESKTOP NAVIGATION */}
+        <nav className="hidden items-center gap-10 md:flex">
+
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              getNavLinkClass(isActive)
+            }
+          >
+            Home
+          </NavLink>
+
+          <NavLink
+            to="/shop"
+            className={() =>
+              getNavLinkClass(isShopActive)
+            }
+          >
+            Shop
+          </NavLink>
+
+          <NavLink
+            to="/about"
+            className={({ isActive }) =>
+              getNavLinkClass(isActive)
+            }
+          >
+            About
+          </NavLink>
+
+          <NavLink
+            to="/contact"
+            className={({ isActive }) =>
+              getNavLinkClass(isActive)
+            }
+          >
+            Contact
+          </NavLink>
+
         </nav>
 
-        {/* Actions */}
+        {/* ACTIONS */}
         <div className="flex items-center gap-3 sm:gap-5">
-          {/* UPDATED: Navigates to /search using React Router */}
+
+          {/* SEARCH */}
           <button
             type="button"
             aria-label="Search products"
-            className="transition hover:text-sole-blue"
-            onClick={() => navigate('/search')}
+            className="transition hover:text-[#123A8C]"
+            onClick={() => navigate('/shop')}
           >
-            <Search size={25} strokeWidth={2.4} />
+            <Search size={27} strokeWidth={2.4} />
           </button>
 
+          {/* FAVORITES */}
           <button
             type="button"
             aria-label="Favorites"
-            className="transition hover:text-sole-blue"
+            className="transition hover:text-[#123A8C]"
             onClick={() => navigate('/favorites')}
           >
-            <Heart size={25} strokeWidth={2.4} />
+            <Heart size={27} strokeWidth={2.4} />
           </button>
 
+          {/* SHOPPING BAG */}
           <button
             type="button"
             aria-label="Shopping bag"
-            className="transition hover:text-sole-blue"
+            className="transition hover:text-[#123A8C]"
             onClick={() => navigate('/cart')}
           >
-            <ShoppingBag size={25} strokeWidth={2.4} />
+            <ShoppingBag size={27} strokeWidth={2.4} />
           </button>
 
+          {/* USER PROFILE */}
           <button
             type="button"
             aria-label="User profile"
-            className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-blue-300 bg-blue-600 font-bold text-white shadow-sm"
+            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-blue-300 bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-[#123A8C]"
             onClick={() => navigate('/profile')}
           >
-            J
+            {userInitial}
           </button>
 
-          {/* Mobile menu toggle */}
+          {/* MOBILE MENU TOGGLE */}
           <button
             type="button"
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
@@ -98,29 +184,71 @@ export default function Navbar() {
             className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X size={25} /> : <Menu size={25} />}
+            {mobileMenuOpen ? <X size={27} /> : <Menu size={27} />}
           </button>
+
         </div>
       </div>
 
-      {/* Mobile navigation */}
+      {/* MOBILE NAVIGATION */}
       {mobileMenuOpen && (
-        <nav className="absolute left-0 top-full flex w-full flex-col border-t bg-white p-4 shadow-lg md:hidden">
-          {navLinks.map((link) => (
-            <Link
-              key={link.label}
-              to={link.href}
-              onClick={() => {
-                setActiveLink(link.label)
-                setMobileMenuOpen(false)
-              }}
-              className="border-b border-gray-100 px-3 py-3 hover:bg-gray-50"
-            >
-              {link.label}
-            </Link>
-          ))}
+        <nav className="absolute left-0 top-full flex w-full flex-col border-t border-gray-200 bg-white p-4 shadow-lg md:hidden">
+
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `border-b border-gray-100 px-3 py-4 text-base font-semibold ${
+                isActive
+                  ? 'border-l-4 border-l-[#123A8C] bg-blue-50 text-[#123A8C]'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`
+            }
+          >
+            Home
+          </NavLink>
+
+          <NavLink
+            to="/shop"
+            className={() =>
+              `border-b border-gray-100 px-3 py-4 text-base font-semibold ${
+                isShopActive
+                  ? 'border-l-4 border-l-[#123A8C] bg-blue-50 text-[#123A8C]'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`
+            }
+          >
+            Shop
+          </NavLink>
+
+          <NavLink
+            to="/about"
+            className={({ isActive }) =>
+              `border-b border-gray-100 px-3 py-4 text-base font-semibold ${
+                isActive
+                  ? 'border-l-4 border-l-[#123A8C] bg-blue-50 text-[#123A8C]'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`
+            }
+          >
+            About
+          </NavLink>
+
+          <NavLink
+            to="/contact"
+            className={({ isActive }) =>
+              `border-b border-gray-100 px-3 py-4 text-base font-semibold ${
+                isActive
+                  ? 'border-l-4 border-l-[#123A8C] bg-blue-50 text-[#123A8C]'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`
+            }
+          >
+            Contact
+          </NavLink>
+
         </nav>
       )}
     </header>
-  )
+  );
 }

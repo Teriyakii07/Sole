@@ -1,12 +1,13 @@
-import type { CartItem } from '../../../models/Cart'
-import { formatPrice } from '../../../models/Cart'
+
+import type { CartItem } from '../../../models/Cart';
+import { formatPrice } from '../../../models/Cart';
 
 interface CartItemViewProps {
-  item: CartItem
-  inputQuantity: number | string
-  onQuantityChange: (id: string, value: string) => void
-  onUpdate: (id: string) => void
-  onRemove: (id: string) => void
+  item: CartItem;
+  inputQuantity: number | string;
+  onQuantityChange: (id: string, value: string) => void;
+  onUpdate: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
 export const CartItemView = ({
@@ -33,8 +34,15 @@ export const CartItemView = ({
           {item.name}
         </h2>
 
-        <p className="mb-4 text-sm font-bold text-black">
+        <p className="mb-2 text-sm font-bold text-black">
           {formatPrice(item.price)}
+        </p>
+
+        {/* SELECTED SHOE SIZE */}
+        <p className="mb-3 text-sm text-gray-600">
+          Size: <span className="font-semibold text-black">
+            {item.size ? `US ${item.size}` : 'Not selected'}
+          </span>
         </p>
 
         {/* QUANTITY */}
@@ -80,5 +88,5 @@ export const CartItemView = ({
         {formatPrice(item.price * item.quantity)}
       </p>
     </div>
-  )
-}
+  );
+};
