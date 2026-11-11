@@ -1,9 +1,11 @@
 
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import type { Product } from '../../../models/Product';
 import ProductCard from './ProductCard';
+import { useCartController } from '../../../controllers/cartControllers';
 
 interface NewArrivalsProps {
   products: Product[];
@@ -15,7 +17,7 @@ export default function NewArrivals({
   loading,
 }: NewArrivalsProps) {
   const [favorites, setFavorites] = useState<(string | number)[]>([]);
-  const [cart, setCart] = useState<Product[]>([]);
+  const { addToCart, totalItems } = useCartController();
 
   function toggleFavorite(id: string | number) {
     setFavorites((current) =>
@@ -25,8 +27,8 @@ export default function NewArrivals({
     );
   }
 
-  function addToCart(product: Product) {
-    setCart((current) => [...current, product]);
+  function handleAddToCart(product: Product) {
+    addToCart(product, 1);
     window.alert(`${product.name} added to cart!`);
   }
 
@@ -37,12 +39,12 @@ export default function NewArrivals({
           New Arrivals
         </h2>
 
-        <a
-          href="/shop"
+        <Link
+          to="/shop"
           className="flex items-center gap-1 text-xs text-sole-blue sm:text-sm"
         >
           VIEW ALL <ArrowRight size={19} />
-        </a>
+        </Link>
       </div>
 
       {loading ? (
@@ -61,15 +63,15 @@ export default function NewArrivals({
               product={product}
               isFavorite={favorites.includes(product.id)}
               onToggleFavorite={toggleFavorite}
-              onAddToCart={addToCart}
+              onAddToCart={handleAddToCart}
             />
           ))}
         </div>
       )}
 
-      {cart.length > 0 && (
+      {totalItems > 0 && (
         <p className="mt-3 text-right text-xs text-gray-500">
-          Items added this session: {cart.length}
+          Items in your cart: {totalItems}
         </p>
       )}
     </section>

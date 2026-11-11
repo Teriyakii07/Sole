@@ -1,6 +1,8 @@
+
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCartController } from './cartControllers';
+
 import {
   emptyProfile,
   emptyAddress,
@@ -10,6 +12,12 @@ import {
   type Favorite,
   type Order,
 } from '../models/Profile';
+
+import {
+  getFavorites,
+  subscribeToFavorites,
+  removeFavorite as deleteFavorite,
+} from './favoritesControllers';
 
 export type ProfileTab = 'personal' | 'favorites' | 'orders' | 'cart';
 
@@ -29,10 +37,12 @@ export function useProfileController() {
   const [addresses, setAddresses] = useState<Address[]>([]);
 
   const [favorites, setFavorites] = useState<Favorite[]>(() =>
-    load('sole_favorites', [])
+    getFavorites()
   );
 
-  const [orders] = useState<Order[]>(() => load('sole_orders', []));
+  const [orders] = useState<Order[]>(() =>
+    load('sole_orders', [])
+  );
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -43,6 +53,14 @@ export function useProfileController() {
 
   const { cart, totalItems, subtotal } = useCartController();
 
+  // SYNC FAVORITES
+  useEffect(() => {
+    return subscribeToFavorites(() => {
+      setFavorites(getFavorites());
+    });
+  }, []);
+
+  // LOAD PROFILE
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -96,6 +114,7 @@ export function useProfileController() {
     void loadProfile();
   }, [loadProfile]);
 
+  // SAVE PROFILE
   async function saveProfile(updated: Profile) {
     setSavingProfile(true);
     setError('');
@@ -120,7 +139,6 @@ export function useProfileController() {
         throw new Error('Please complete all personal information fields.');
       }
 
-      // Update the public profile information.
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -133,7 +151,6 @@ export function useProfileController() {
 
       if (profileError) throw profileError;
 
-      // Email is managed by Supabase Auth, not the profiles table.
       if (email !== (user.email ?? '').toLowerCase()) {
         const { error: emailError } = await supabase.auth.updateUser({
           email,
@@ -167,6 +184,7 @@ export function useProfileController() {
     }
   }
 
+  // ADD ADDRESS
   async function addAddress(data: AddressFormData) {
     setSavingAddress(true);
     setError('');
@@ -184,7 +202,6 @@ export function useProfileController() {
       const hasDefault = addresses.some(address => address.is_default);
       const shouldBeDefault = data.is_default || !hasDefault;
 
-      // If this address is the new default, clear the previous default first.
       if (shouldBeDefault) {
         const { error: defaultError } = await supabase
           .from('addresses')
@@ -226,6 +243,7 @@ export function useProfileController() {
     }
   }
 
+  // UPDATE ADDRESS
   async function updateAddress(id: string, data: AddressFormData) {
     setSavingAddress(true);
     setError('');
@@ -282,6 +300,7 @@ export function useProfileController() {
     }
   }
 
+  // DELETE ADDRESS
   async function deleteAddress(id: string) {
     setError('');
     setMessage('');
@@ -299,7 +318,6 @@ export function useProfileController() {
 
       setAddresses(remaining);
 
-      // If the deleted address was the default, make another address default.
       if (deleted?.is_default && remaining.length > 0) {
         await setDefaultAddress(remaining[0].id);
       } else {
@@ -312,6 +330,7 @@ export function useProfileController() {
     }
   }
 
+  // SET DEFAULT ADDRESS
   async function setDefaultAddress(id: string) {
     setError('');
     setMessage('');
@@ -355,12 +374,13 @@ export function useProfileController() {
     }
   }
 
+  // REMOVE FAVORITE FROM PROFILE
   function removeFavorite(id: string) {
-    const updated = favorites.filter(item => item.id !== id);
-    setFavorites(updated);
-    localStorage.setItem('sole_favorites', JSON.stringify(updated));
+    deleteFavorite(id);
+    setFavorites(getFavorites());
   }
 
+  // SELECT PROFILE TAB
   function selectTab(next: ProfileTab) {
     setTab(next);
     setSaved(false);
