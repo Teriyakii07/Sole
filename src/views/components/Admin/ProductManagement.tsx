@@ -16,7 +16,6 @@ import type {
   VariantFormData,
 } from '../../../models/Admin';
 import { getProductImageUrl } from '../../../controllers/productImageController';
-import { handleImageError } from '../../../lib/imageFallback';
 
 type Props = {
   products: Product[];
@@ -465,7 +464,9 @@ const handleSubmit = async (
                           <img
                             src={getProductImageUrl(product.image_url)}
                             alt={product.name}
-                            onError={handleImageError}
+                            onError={(event) => {
+                              event.currentTarget.src = '/images/product-placeholder.png';
+                            }}
                             className="h-14 w-14 rounded-lg border border-gray-200 bg-gray-50 object-contain p-1"
                           />
 
@@ -742,7 +743,6 @@ const handleSubmit = async (
         }
         alt="Product preview"
         className="h-40 w-40 rounded-lg border border-gray-200 bg-gray-50 object-contain p-2"
-        onError={handleImageError}
       />
     </div>
   )}

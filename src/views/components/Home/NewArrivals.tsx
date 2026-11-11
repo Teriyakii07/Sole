@@ -1,3 +1,5 @@
+
+import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -54,7 +56,7 @@ export default function NewArrivals({
           No new arrivals available right now.
         </p>
       ) : (
-        <div className="mx-auto grid max-w-[1050px] grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+        <div className="mx-auto grid max-w-[750px] grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {products.slice(0, 8).map((product) => (
             <ProductCard
               key={product.id}

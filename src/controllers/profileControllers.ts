@@ -9,6 +9,7 @@ import {
   type Profile,
   type Address,
   type AddressFormData,
+  type Favorite,
   type Order,
 } from '../models/Profile';
 
@@ -50,13 +51,7 @@ export function useProfileController() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const {
-    cart,
-    totalItems,
-    subtotal,
-    changeQuantity,
-    removeItem,
-  } = useCartController();
+  const { cart, totalItems, subtotal } = useCartController();
 
   // SYNC FAVORITES
   useEffect(() => {
@@ -411,11 +406,11 @@ export function useProfileController() {
     deleteAddress,
     setDefaultAddress,
     emptyAddress,
+    favorites,
+    removeFavorite,
     orders,
     cart,
     totalItems,
     subtotal,
-    changeQuantity,
-    removeItem,
   };
 }

@@ -1,7 +1,6 @@
 
-import { ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { HomeCategory } from '../../../models/Product';
-import { handleImageError } from '../../../lib/imageFallback';
 
 interface CategorySectionProps {
   categories: HomeCategory[];
@@ -44,21 +43,12 @@ export default function CategorySection({
               className="group flex min-w-0 flex-col items-center"
             >
               <div className="flex h-20 w-full items-center justify-center sm:h-24">
-                {category.image ? (
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
-                    loading="lazy"
-                    onError={handleImageError}
-                  />
-                ) : (
-                  <ImageIcon
-                    aria-hidden="true"
-                    className="text-gray-300"
-                    size={32}
-                  />
-                )}
+                <img
+                  src={category.image}
+                  alt={category.name}
+                  className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105"
+                  loading="lazy"
+                />
               </div>
 
               <span className="mt-2 text-center text-[11px] sm:text-xs">

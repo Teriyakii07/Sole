@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Heart,
@@ -19,18 +20,6 @@ import {
 } from '../../controllers/favoritesControllers';
 
 import type { Product } from '../../models/Product';
-import { handleImageError } from '../../lib/imageFallback';
-import { useCart } from '../../context/Cartcontext';
-import { useFavorites } from '../../context/Favoritescontext';
-
-interface Variant {
-  id: string;
-  size_label: string;
-  size_system: string;
-  color: string;
-  price: number;
-  stock_quantity: number;
-}
 
 const shoeSizes = [
   '5', '5.5', '6', '6.5', '7',
@@ -43,12 +32,8 @@ export default function ProductCatalog() {
   const { addToCart } = useCartController();
 
   const [product, setProduct] = useState<Product | null>(null);
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [added, setAdded] = useState(false);
-  const [sizeError, setSizeError] = useState(false);
 
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -82,8 +67,6 @@ export default function ProductCatalog() {
     async function loadProduct() {
       setLoading(true);
       setError('');
-      setSelectedVariantId(null);
-      setSizeError(false);
 
       try {
         if (!id) {
@@ -91,18 +74,7 @@ export default function ProductCatalog() {
           return;
         }
 
-        const [result, variantResult] = await Promise.all([
-          getProductById(id),
-          supabase
-            .from('product_variants')
-            .select('id, size_label, size_system, color, price, stock_quantity')
-            .eq('product_id', id)
-            .eq('is_active', true),
-        ]);
-
-        if (variantResult.error) {
-          console.error('Unable to load sizes:', variantResult.error);
-        }
+        const result = await getProductById(id);
 
         if (isMounted) {
           setProduct(result);

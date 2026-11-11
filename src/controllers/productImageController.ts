@@ -105,10 +105,10 @@ export function getProductImageUrl(
   imagePath: string | null | undefined
 ): string {
   if (!imagePath) {
-    return '';
+    return '/images/product-placeholder.png';
   }
 
-  if (/^(https?:|\/|data:)/i.test(imagePath)) {
+  if (imagePath.startsWith('http')) {
     return imagePath;
   }
 
