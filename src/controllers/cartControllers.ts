@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { CartItem, initialCartData, calculateTotalItems, calculateSubtotal } from '../models/Cart';
+import {
+  type CartItem,
+  initialCartData,
+  calculateTotalItems,
+  calculateSubtotal
+} from '../models/Cart';
 
 export function useCartController() {
   const [cart, setCart] = useState<CartItem[]>(initialCartData);

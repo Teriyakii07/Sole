@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ProfileTab, useProfileController } from '../../controllers/profileControllers'
+import { type ProfileTab, useProfileController } from '../../controllers/profileControllers';
 import { formatPrice } from '../../models/Cart'
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import type { Profile as ProfileData, Address, AddressFormData } from '../../models/Profile';
