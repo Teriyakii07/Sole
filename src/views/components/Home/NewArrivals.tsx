@@ -28,7 +28,7 @@ export default function NewArrivals({
   }
 
   function handleAddToCart(product: Product) {
-    addToCart(product, 1);
+    addToCart(product, "1");
     window.alert(`${product.name} added to cart!`);
   }
 
