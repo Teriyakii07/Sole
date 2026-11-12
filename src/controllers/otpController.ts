@@ -1,6 +1,104 @@
 import type { OTPPayload, AuthResponse, OTPPurpose } from '../views/types/AuthTypes';
 
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+export const requestPasswordResetOTP = async (email: string): Promise<AuthResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/password-reset/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Unable to send a password reset code.',
+      };
+    }
+
+    return {
+      success: true,
+      requiresOTP: true,
+      message: data.message || 'Verification code sent via PhilSMS.',
+      phone: data.phone,
+      otpHash: data.otpHash,
+      createdAt: data.createdAt,
+    };
+  } catch (error) {
+    console.error('Password Reset OTP Request Error:', error);
+    return {
+      success: false,
+      message: 'Network error while requesting a password reset code.',
+    };
+  }
+};
+
+export const verifyPasswordResetOTP = async (
+  hash: string,
+  code: string
+): Promise<AuthResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/password-reset/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hash, code }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Invalid or expired verification code.',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Phone number verified successfully.',
+      resetToken: data.resetToken,
+    };
+  } catch (error) {
+    console.error('Password Reset OTP Verification Error:', error);
+    return {
+      success: false,
+      message: 'Network error while verifying your code.',
+    };
+  }
+};
+
+export const completePasswordReset = async (
+  resetToken: string,
+  password: string
+): Promise<AuthResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/password-reset/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resetToken, password }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Unable to update your password.',
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Your password has been updated.',
+    };
+  } catch (error) {
+    console.error('Password Reset Completion Error:', error);
+    return {
+      success: false,
+      message: 'Network error while updating your password.',
+    };
+  }
+};
 
 // Standardizes any PH phone number format (+639..., 09..., 639...) to 639XXXXXXXXX
 function normalizePhone(phone: string): string {

@@ -33,6 +33,7 @@ export interface AuthResponse {
   userId?: string;
   otpHash?: string;
   createdAt?: number;
+  resetToken?: string;
 }
 
 export interface UserProfile {
