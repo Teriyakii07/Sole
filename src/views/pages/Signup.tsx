@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
@@ -26,6 +26,10 @@ interface FormErrors {
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
+
+  const location = useLocation();
+
+  const from = location.state?.from;
 
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('signup');
 
@@ -442,7 +446,10 @@ const [otpPhone, setOtpPhone] = useState('');
       alert('Phone verification successful! Please log in.');
 
       // Navigate to the login page.
-      navigate('/login', { replace: true });
+      navigate('/login', {
+        replace: true,
+        state: { from },
+      });
 
     } catch (error) {
       console.error('Post-registration verification error:', error);

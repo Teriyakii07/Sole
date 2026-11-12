@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { AuthPromptProvider } from './context/AuthPromptContext';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
@@ -26,7 +27,7 @@ import FAQPage from './views/pages/FAQPage';
 import { LoginPage } from './views/pages/Login';
 import { SignUpPage } from './views/pages/Signup';
 import ProductCatalog from './views/pages/ProductCatalog';
-import Checkout from './views/pages/Checkout'
+import Checkout from './views/pages/Checkout';
 import Shop from './views/pages/Shop';
 import Favorites from './views/pages/Favorites';
 
@@ -43,7 +44,9 @@ function MainLayout() {
     <>
       {!isAuthPage && !isAdmin && <Navbar />}
 
-      <Outlet />
+      <div className={location.pathname === '/shop' ? 'pb-16' : ''}>
+        <Outlet />
+      </div>
 
       {!isAuthPage && !isAdmin && <Footer />}
     </>
@@ -54,40 +57,53 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            {/* Guest-only routes */}
-{/* Login is guest-only */}
-            <Route element={<GuestRoute />}>
-              <Route path="/login" element={<LoginPage />} />
-            </Route>
+        <AuthPromptProvider>
+          <Routes>
+            <Route element={<MainLayout />}>
 
-            {/* Signup must remain accessible until OTP verification */}
-            <Route path="/signup" element={<SignUpPage />} />
-
-            {/* Admin-only routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminDashboard />} />
+              {/* Login is for guests */}
+              <Route element={<GuestRoute />}>
+                <Route path="/login" element={<LoginPage />} />
               </Route>
+
+              {/* Signup remains accessible for OTP verification */}
+              <Route path="/signup" element={<SignUpPage />} />
+
+              {/* Public pages */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/faqs" element={<FAQPage />} />
+              <Route path="/product/:id" element={<ProductCatalog />} />
+
+              {/* Customer-only pages */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="/cart" element={<ShoppingCartView />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/checkout" element={<Checkout />} />
+              </Route>
+
+              {/* Admin-only pages */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AdminRoute />}>
+                  <Route
+                    path="/admin"
+                    element={<AdminDashboard />}
+                  />
+                </Route>
+              </Route>
+
+              {/* Unknown routes */}
+              <Route
+                path="*"
+                element={<div>Page not found.</div>}
+              />
+
             </Route>
-
-            {/* Customer/public pages */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/contact" element={<ContactUs />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/cart" element={<ShoppingCartView />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/faqs" element={<FAQPage />} />
-            <Route path="/product/:id" element={<ProductCatalog />} />
-            <Route path="/checkout" element={<Checkout />} />
-
-            {/* Unknown routes */}
-            <Route path="*" element={<div>Page not found.</div>} />
-          </Route>
-        </Routes>
+          </Routes>
+        </AuthPromptProvider>
       </BrowserRouter>
     </AuthProvider>
   );

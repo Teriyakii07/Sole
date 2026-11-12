@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import type { Product } from '../../../models/Product';
 import ProductCard from './ProductCard';
 import { useCartController } from '../../../controllers/cartControllers';
+import { useAuthPrompt } from '../../../context/AuthPromptContext';
 
 interface NewArrivalsProps {
   products: Product[];
@@ -18,8 +19,11 @@ export default function NewArrivals({
 }: NewArrivalsProps) {
   const [favorites, setFavorites] = useState<(string | number)[]>([]);
   const { addToCart, totalItems } = useCartController();
+  const { requireLogin } = useAuthPrompt();
 
   function toggleFavorite(id: string | number) {
+    if (!requireLogin()) return;
+
     setFavorites((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
@@ -28,8 +32,9 @@ export default function NewArrivals({
   }
 
   function handleAddToCart(product: Product) {
+    if (!requireLogin()) return;
+
     addToCart(product, "1");
-    window.alert(`${product.name} added to cart!`);
   }
 
   return (

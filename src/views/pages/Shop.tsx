@@ -165,11 +165,11 @@ export default function Shop() {
     maxPrice !== '';
 
   return (
-    <main className="min-h-screen bg-white px-4 py-10 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1440px]">
+    <main className="h-[calc(100dvh-80px+180px)] overflow-hidden bg-white px-4 pb-16 pt-5 sm:px-6 sm:pt-6 lg:px-10">
+      <div className="mx-auto flex h-full max-w-[1440px] flex-col">
 
         {/* PAGE HEADER */}
-        <div className="mb-10">
+        <div className="mb-4 shrink-0">
           <p className="mb-2 text-sm font-bold tracking-[3px] text-[#D7192D]">
             STEP INTO STYLE
           </p>
@@ -178,13 +178,13 @@ export default function Shop() {
             All Shoes
           </h1>
 
-          <p className="mt-3 text-sm text-gray-500 sm:text-base">
+          <p className="mt-2 text-sm text-gray-500 sm:text-base">
             Find the perfect pair for your everyday style.
           </p>
         </div>
 
         {/* SEARCH AND SORT */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-md">
             <Search
               size={20}
@@ -222,12 +222,12 @@ export default function Shop() {
         </div>
 
         {/* SHOP CONTENT */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-[250px_minmax(0,1fr)]">
 
           {/* FILTER SIDEBAR */}
-          <aside className="h-fit border border-gray-200 p-5">
+          <aside className="hidden h-fit border border-gray-200 p-4 lg:block">
 
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal
                   size={19}
@@ -251,8 +251,8 @@ export default function Shop() {
             </div>
 
             {/* BRAND FILTER */}
-            <div className="border-t border-gray-200 py-5">
-              <h3 className="mb-4 text-sm font-bold text-gray-900">
+            <div className="border-t border-gray-200 py-3">
+              <h3 className="mb-3 text-sm font-bold text-gray-900">
                 Brand
               </h3>
 
@@ -272,8 +272,8 @@ export default function Shop() {
             </div>
 
             {/* CATEGORY FILTER */}
-            <div className="border-t border-gray-200 py-5">
-              <h3 className="mb-4 text-sm font-bold text-gray-900">
+            <div className="border-t border-gray-200 py-3">
+              <h3 className="mb-3 text-sm font-bold text-gray-900">
                 Category
               </h3>
 
@@ -293,8 +293,8 @@ export default function Shop() {
             </div>
 
             {/* PRICE FILTER */}
-            <div className="border-t border-gray-200 py-5">
-              <h3 className="mb-4 text-sm font-bold text-gray-900">
+            <div className="border-t border-gray-200 py-3">
+              <h3 className="mb-3 text-sm font-bold text-gray-900">
                 Price Range
               </h3>
 
@@ -357,8 +357,10 @@ export default function Shop() {
           </aside>
 
           {/* PRODUCT RESULTS */}
-          <section>
-            <div className="mb-5 flex items-center justify-between">
+          <section className="flex min-h-0 flex-col pl-2">
+
+            {/* PRODUCT COUNT */}
+            <div className="mb-3 shrink-0">
               <p className="text-sm text-gray-500">
                 Showing{' '}
                 <span className="font-bold text-gray-900">
@@ -372,82 +374,85 @@ export default function Shop() {
               </p>
             </div>
 
-            {loading ? (
-              <div className="py-20 text-center">
-                <p className="text-gray-500">
-                  Loading shoes...
-                </p>
-              </div>
-            ) : error ? (
-              <div className="rounded border border-red-200 bg-red-50 p-6 text-center">
-                <p className="text-red-600">{error}</p>
+            {/* ONLY THE SHOES SCROLL */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2">
+              {loading ? (
+                <div className="py-20 text-center">
+                  <p className="text-gray-500">
+                    Loading shoes...
+                  </p>
+                </div>
+              ) : error ? (
+                <div className="rounded border border-red-200 bg-red-50 p-6 text-center">
+                  <p className="text-red-600">{error}</p>
 
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="mt-4 font-bold text-[#123A8C] hover:underline"
-                >
-                  Try Again
-                </button>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="py-20 text-center">
-                <h2 className="text-xl font-bold text-gray-800">
-                  No Shoes Found
-                </h2>
-
-                <p className="mt-2 text-sm text-gray-500">
-                  Try changing your search or filters.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="mt-5 bg-[#123A8C] px-6 py-3 text-sm font-bold text-white hover:bg-[#D7192D]"
-                >
-                  CLEAR FILTERS
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                {filteredProducts.map((product) => (
-                  <Link
-                    key={product.id}
-                    to={`/product/${product.id}`}
-                    className="group min-w-0 no-underline"
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="mt-4 font-bold text-[#123A8C] hover:underline"
                   >
-                    {/* PRODUCT IMAGE */}
-                    <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded bg-[#F5F6FA]">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        loading="lazy"
-                        className="h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
+                    Try Again
+                  </button>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="py-20 text-center">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    No Shoes Found
+                  </h2>
 
-                    {/* PRODUCT DETAILS */}
-                    <div className="pt-4">
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#123A8C]">
-                        {product.brand || product.category}
-                      </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Try changing your search or filters.
+                  </p>
 
-                      <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-[#123A8C]">
-                        {product.name}
-                      </h3>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-5 bg-[#123A8C] px-6 py-3 text-sm font-bold text-white hover:bg-[#D7192D]"
+                  >
+                    CLEAR FILTERS
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-6 gap-y-10 pb-8 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  {filteredProducts.map((product) => (
+                    <Link
+                      key={product.id}
+                      to={`/product/${product.id}`}
+                      className="group min-w-0 no-underline"
+                    >
+                      {/* PRODUCT IMAGE */}
+                      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded bg-[#F5F6FA]">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          loading="lazy"
+                          className="h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
 
-                      <p className="mt-2 text-sm font-bold text-black">
-                        {formatPrice(product.price)}
-                      </p>
+                      {/* PRODUCT DETAILS */}
+                      <div className="pt-4">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#123A8C]">
+                          {product.brand || product.category}
+                        </p>
 
-                      <p className="mt-1 text-xs text-gray-500">
-                        {product.category}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+                        <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-[#123A8C]">
+                          {product.name}
+                        </h3>
+
+                        <p className="mt-2 text-sm font-bold text-black">
+                          {formatPrice(product.price)}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          {product.category}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         </div>
       </div>
