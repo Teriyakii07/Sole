@@ -11,7 +11,14 @@ import {
 } from 'lucide-react';
 
 import { handleLogin } from '../../controllers/authController';
+import {
+  completePasswordReset,
+  requestPasswordResetOTP,
+  verifyPasswordResetOTP
+} from '../../controllers/otpController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
+
+type PasswordResetStep = 'email' | 'otp' | 'password' | 'complete';
 
 interface LoginErrors {
   usernameOrEmail?: string;
@@ -39,6 +46,14 @@ export const LoginPage: React.FC = () => {
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
+  const [resetStep, setResetStep] = useState<PasswordResetStep>('email');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetOtpHash, setResetOtpHash] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetPhone, setResetPhone] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isResetLoading, setIsResetLoading] = useState(false);
 
   const handleTabSwitch = (tab: 'login' | 'signup') => {
     setActiveTab(tab);
@@ -113,7 +128,7 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
 
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setResetMessage('');
@@ -129,9 +144,90 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       return;
     }
 
-    setResetMessage(
-      `Demo mode: A password reset link would be sent to ${resetEmail.trim()}.`
-    );
+    setIsResetLoading(true);
+    try {
+      const response = await requestPasswordResetOTP(resetEmail);
+      if (!response.success || !response.otpHash || !response.phone) {
+        setResetError(response.message || 'Unable to send a password reset code.');
+        return;
+      }
+
+      setResetOtpHash(response.otpHash);
+      setResetPhone(response.phone);
+      setResetStep('otp');
+      setResetMessage(`A verification code was sent to ${response.phone}.`);
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
+  const handleVerifyResetOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetMessage('');
+    setResetError('');
+
+    if (!/^\d{6}$/.test(resetOtp)) {
+      setResetError('Please enter the 6-digit code sent to your phone.');
+      return;
+    }
+
+    setIsResetLoading(true);
+    try {
+      const response = await verifyPasswordResetOTP(resetOtpHash, resetOtp);
+      if (!response.success || !response.resetToken) {
+        setResetError(response.message || 'Unable to verify your code.');
+        return;
+      }
+
+      setResetToken(response.resetToken);
+      setResetStep('password');
+      setResetMessage('');
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
+  const handleCompletePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetMessage('');
+    setResetError('');
+
+    if (newPassword.length < 8 || !newPassword.trim()) {
+      setResetError('Your new password must contain at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Your passwords do not match.');
+      return;
+    }
+
+    setIsResetLoading(true);
+    try {
+      const response = await completePasswordReset(resetToken, newPassword);
+      if (!response.success) {
+        setResetError(response.message || 'Unable to update your password.');
+        return;
+      }
+
+      setResetStep('complete');
+      setResetMessage('Your password has been updated. You can now sign in.');
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
+  const returnToLogin = () => {
+    setIsForgotPassView(false);
+    setResetStep('email');
+    setResetEmail('');
+    setResetMessage('');
+    setResetError('');
+    setResetOtp('');
+    setResetOtpHash('');
+    setResetToken('');
+    setResetPhone('');
+    setNewPassword('');
+    setConfirmNewPassword('');
   };
 
   const inputClass = (hasError: boolean) =>
@@ -164,7 +260,13 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
           <p className="mt-2 text-center text-sm text-slate-500">
             {isForgotPassView
-              ? 'Enter your email to get password reset instructions.'
+              ? resetStep === 'otp'
+                ? 'Enter the verification code sent to your phone.'
+                : resetStep === 'password'
+                  ? 'Choose a new password for your account.'
+                  : resetStep === 'complete'
+                    ? 'Your account password is ready to use.'
+                    : 'Enter your email to receive a password reset code.'
               : 'Sign in to continue your sneaker journey.'}
           </p>
         </div>
@@ -205,11 +307,17 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         {/* FORGOT PASSWORD */}
         {isForgotPassView ? (
           <form
-            onSubmit={handleForgotPassword}
+            onSubmit={
+              resetStep === 'email'
+                ? handleForgotPassword
+                : resetStep === 'otp'
+                  ? handleVerifyResetOTP
+                  : handleCompletePasswordReset
+            }
             className="space-y-5"
             noValidate
           >
-            <div>
+            {resetStep !== 'complete' && <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
                 Email Address
               </label>
@@ -223,6 +331,7 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 <input
                   type="email"
                   value={resetEmail}
+                  disabled={resetStep !== 'email'}
                   onChange={(e) => {
                     setResetEmail(e.target.value);
                     setResetError('');
@@ -230,16 +339,90 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   }}
                   placeholder="name@example.com"
                   className={inputClass(!!resetError)}
+                  autoComplete="email"
                 />
               </div>
+            </div>}
 
-              {resetError && (
-                <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600">
-                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                  {resetError}
+            {resetStep === 'otp' && (
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
+                  SMS Verification Code
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={resetOtp}
+                  onChange={(e) => {
+                    setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    setResetError('');
+                  }}
+                  placeholder="Enter 6-digit code"
+                  className={inputClass(!!resetError)}
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  Code sent to {resetPhone}.
                 </p>
-              )}
-            </div>
+              </div>
+            )}
+
+            {resetStep === 'password' && (
+              <>
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <Lock
+                      size={17}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setResetError('');
+                      }}
+                      placeholder="At least 8 characters"
+                      className={inputClass(!!resetError)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
+                    Confirm New Password
+                  </label>
+                  <div className="relative">
+                    <Lock
+                      size={17}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmNewPassword}
+                      onChange={(e) => {
+                        setConfirmNewPassword(e.target.value);
+                        setResetError('');
+                      }}
+                      placeholder="Re-enter your new password"
+                      className={inputClass(!!resetError)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {resetError && (
+              <p className="flex items-start gap-1.5 text-xs text-red-600">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                {resetError}
+              </p>
+            )}
 
             {resetMessage && (
               <div className="flex gap-2 rounded-xl border border-green-200 bg-green-50 p-3 text-xs text-green-700">
@@ -248,20 +431,30 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
               </div>
             )}
 
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-[#123A8C] py-3.5 text-sm font-bold text-white transition hover:bg-blue-900"
-            >
-              Send Reset Link
-            </button>
+            {resetStep !== 'complete' && (
+              <button
+                type="submit"
+                disabled={isResetLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#123A8C] py-3.5 text-sm font-bold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResetLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Processing...
+                  </>
+                ) : resetStep === 'email' ? (
+                  'Send SMS Code'
+                ) : resetStep === 'otp' ? (
+                  'Verify Code'
+                ) : (
+                  'Update Password'
+                )}
+              </button>
+            )}
 
             <button
               type="button"
-              onClick={() => {
-                setIsForgotPassView(false);
-                setResetMessage('');
-                setResetError('');
-              }}
+              onClick={returnToLogin}
               className="block w-full text-center text-xs font-semibold text-slate-500 hover:text-[#123A8C]"
             >
               ← Back to Login

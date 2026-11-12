@@ -122,6 +122,14 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
+The PhilSMS API (`frontend/server.ts`) also needs `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` in its server environment for SMS password resets.
+Keep the service-role key server-side only; do not prefix it with `VITE_` or
+expose it to the browser. The backend loads the root `.env` file when started
+locally. `npm run dev` starts the local API automatically. If you run the API
+separately, use `npm run server` and do not start a second copy with Vite. When
+the API runs on a different host, set `VITE_API_URL` to that server's base URL.
+
 ### 🚀 Development Commands
 
 Run these commands inside the frontend project directory.
