@@ -122,19 +122,30 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
-The password-reset API needs `SUPABASE_URL` (or `VITE_SUPABASE_URL`),
-`SUPABASE_SERVICE_ROLE_KEY`, and `PHILSMS_API_TOKEN` in its server environment.
-`PHILSMS_SENDER_ID` is optional and defaults to `PhilSMS`. Keep the service-role
-key and PhilSMS token server-side only; do not prefix them with `VITE_` or
-expose them to the browser.
+Signup OTP and password-reset requests use the Supabase Edge Function
+`auth-otp` in production. The function stores OTP and password-reset sessions
+in Supabase tables so they persist between function calls. Apply both
+`supabase/otp_sessions.sql` and `supabase/password_reset_sessions.sql` in the
+Supabase SQL Editor before deploying the function.
 
-Locally, the backend loads the root `.env` file and `npm run dev` starts the
-local API automatically. For Vercel, add the server variables above to the
-project's Environment Variables, then run `supabase/password_reset_sessions.sql`
-in the Supabase SQL Editor and redeploy. The Vercel API stores OTP and reset
-sessions in this table so they remain available across serverless invocations.
-`VITE_API_URL` is optional: leave it unset on Vercel to use its same-origin API;
-locally it defaults to `http://localhost:5000`.
+Link the Supabase CLI to this project and deploy with
+`supabase functions deploy auth-otp`. Configure `PHILSMS_API_TOKEN` and,
+optionally, `PHILSMS_SENDER_ID` as Supabase Function secrets. Supabase provides
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Keep all
+server secrets out of Vercel's `VITE_` variables and browser code. Vercel serves
+the frontend; its production OTP calls go directly to Supabase.
+
+The checked-in `supabase/config.toml` disables gateway JWT checks for this
+function because signup and password recovery begin before a user is
+authenticated; the function still validates every action and OTP itself.
+Vercel needs the client-side `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` build variables. Do not set `VITE_API_URL` on
+Vercel; production OTP calls use the Edge Function.
+
+For local development, `npm run dev` still starts the local API and the
+frontend uses it automatically. Set `VITE_API_URL` only when intentionally
+using a separate API server. The local API still needs `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, and `PHILSMS_API_TOKEN` in the root `.env` file.
 
 ### 🚀 Development Commands
 

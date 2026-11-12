@@ -8,10 +8,9 @@ import {
   Loader2
 } from 'lucide-react';
 
-import { handleSignUp, handleLogout } from '../../controllers/authController';
+import { handleSignUp } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
-import { sendPhilSMSOTP } from "../../controllers/otpController";
 
 
 interface FormErrors {
@@ -421,31 +420,19 @@ const [otpPhone, setOtpPhone] = useState('');
       
 {/* OTP Verification Modal */}
 <OTPModal
+  key={showOTP ? otpHash : 'closed'}
   isOpen={showOTP}
   phone={otpPhone}
   purpose="REGISTRATION"
   hash={otpHash}
   createdAt={otpCreatedAt}
   onClose={() => setShowOTP(false)}
-  onSuccess={async () => {
+  onSuccess={() => {
     try {
-      // Close the OTP modal.
       setShowOTP(false);
-
-      // End the temporary Supabase session created during signup.
-      const logoutResult = await handleLogout();
-
-      if (!logoutResult.success) {
-        setErrors({
-          general:
-            'Phone verified, but we could not complete sign-out. Please try logging in again.'
-        });
-        return;
-      }
 
       alert('Phone verification successful! Please log in.');
 
-      // Navigate to the login page.
       navigate('/login', {
         replace: true,
         state: { from },

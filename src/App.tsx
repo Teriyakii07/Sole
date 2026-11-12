@@ -69,8 +69,12 @@ function App() {
               {/* Signup remains accessible for OTP verification */}
               <Route path="/signup" element={<SignUpPage />} />
 
+              {/* Require a signed-in user before entering the homepage. */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<HomePage />} />
+              </Route>
+
               {/* Public pages */}
-              <Route path="/" element={<HomePage />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/about" element={<AboutUs />} />
               <Route path="/contact" element={<ContactUs />} />
