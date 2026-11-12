@@ -1,7 +1,6 @@
 import type { OTPPayload, AuthResponse, OTPPurpose } from '../views/types/AuthTypes';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000' : '');
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const requestPasswordResetOTP = async (email: string): Promise<AuthResponse> => {
   try {
