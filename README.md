@@ -122,19 +122,13 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
-The password-reset API needs `SUPABASE_URL` (or `VITE_SUPABASE_URL`),
-`SUPABASE_SERVICE_ROLE_KEY`, and `PHILSMS_API_TOKEN` in its server environment.
-`PHILSMS_SENDER_ID` is optional and defaults to `PhilSMS`. Keep the service-role
-key and PhilSMS token server-side only; do not prefix them with `VITE_` or
-expose them to the browser.
-
-Locally, the backend loads the root `.env` file and `npm run dev` starts the
-local API automatically. For Vercel, add the server variables above to the
-project's Environment Variables, then run `supabase/password_reset_sessions.sql`
-in the Supabase SQL Editor and redeploy. The Vercel API stores OTP and reset
-sessions in this table so they remain available across serverless invocations.
-`VITE_API_URL` is optional: leave it unset on Vercel to use its same-origin API;
-locally it defaults to `http://localhost:5000`.
+The PhilSMS API (`frontend/server.ts`) also needs `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` in its server environment for SMS password resets.
+Keep the service-role key server-side only; do not prefix it with `VITE_` or
+expose it to the browser. The backend loads the root `.env` file when started
+locally. `npm run dev` starts the local API automatically. If you run the API
+separately, use `npm run server` and do not start a second copy with Vite. When
+the API runs on a different host, set `VITE_API_URL` to that server's base URL.
 
 ### 🚀 Development Commands
 
