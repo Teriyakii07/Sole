@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
@@ -21,6 +21,10 @@ interface LoginErrors {
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+
+  const location = useLocation();
+
+  const from = location.state?.from;
 
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
 
@@ -98,6 +102,18 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       });
       return;
     }
+
+    navigate(
+      from?.pathname
+        ? {
+            pathname: from.pathname,
+            search: from.search || '',
+            hash: from.hash || '',
+          }
+        : '/',
+      { replace: true }
+    );
+
 
   } catch (error) {
     console.error('Login submission error:', error);

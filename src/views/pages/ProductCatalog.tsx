@@ -11,6 +11,8 @@ import {
   X,
 } from 'lucide-react';
 
+import { useAuthPrompt } from '../../context/AuthPromptContext';
+
 import { getProductById } from '../../controllers/productControllers';
 import { useCartController } from '../../controllers/cartControllers';
 import {
@@ -29,7 +31,9 @@ const shoeSizes = [
 export default function ProductCatalog() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const { addToCart } = useCartController();
+  const { requireLogin } = useAuthPrompt();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,6 +168,9 @@ export default function ProductCatalog() {
 
   // ADD TO CART OR BUY NOW
   function handleAddToBag(goToCheckout = false) {
+    // Require login before adding anything to the cart.
+    if (!requireLogin()) return;
+
     if (!selectedSize) {
       showNotification('Please select a shoe size first.', 'error');
       return;
@@ -188,6 +195,9 @@ export default function ProductCatalog() {
 
   // ADD OR REMOVE FAVORITE
   function handleToggleFavorite() {
+    // Require login before changing favorites.
+    if (!requireLogin()) return;
+
     const added = toggleFavorite(currentProduct);
 
     setIsFavorite(added);

@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, NavLink, Link } from 'react-router-dom';
+import { useAuthPrompt } from '../../../context/AuthPromptContext';
 
 import {
   Search,
@@ -10,12 +11,23 @@ import {
   X,
 } from 'lucide-react';
 
+import {
+  getFavorites,
+  subscribeToFavorites,
+} from '../../../controllers/favoritesControllers';
+
+import { useCartController } from '../../../controllers/cartControllers';
+
 import { supabase } from '../../../lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { requireLogin } = useAuthPrompt();
+
+  const [favoriteCount, setFavoriteCount] = useState(0);
+  const { totalItems } = useCartController();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -41,6 +53,17 @@ export default function Navbar() {
     return () => {
       subscription.unsubscribe();
     };
+  }, []);
+
+  // GET AND SYNC FAVORITES COUNT
+  useEffect(() => {
+    const updateFavorites = () => {
+      setFavoriteCount(getFavorites().length);
+    };
+
+    updateFavorites();
+
+    return subscribeToFavorites(updateFavorites);
   }, []);
 
   // CLOSE MOBILE MENU WHEN PAGE CHANGES
@@ -149,21 +172,41 @@ export default function Navbar() {
           {/* FAVORITES */}
           <button
             type="button"
-            aria-label="Favorites"
-            className="transition hover:text-[#123A8C]"
-            onClick={() => navigate('/favorites')}
+            aria-label={`Favorites, ${favoriteCount} saved items`}
+            className="relative transition hover:text-[#123A8C]"
+            onClick={() => {
+              if (requireLogin()) {
+                navigate('/favorites');
+              }
+            }}
           >
             <Heart size={27} strokeWidth={2.4} />
+
+            {favoriteCount > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D7192D] px-1 text-[10px] font-bold text-white">
+                {favoriteCount > 99 ? '99+' : favoriteCount}
+              </span>
+            )}
           </button>
 
           {/* SHOPPING BAG */}
           <button
             type="button"
-            aria-label="Shopping bag"
-            className="transition hover:text-[#123A8C]"
-            onClick={() => navigate('/cart')}
+            aria-label={`Shopping bag, ${totalItems} items`}
+            className="relative transition hover:text-[#123A8C]"
+            onClick={() => {
+              if (requireLogin()) {
+                navigate('/cart');
+              }
+            }}
           >
             <ShoppingBag size={27} strokeWidth={2.4} />
+
+            {totalItems > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D7192D] px-1 text-[10px] font-bold text-white">
+                {totalItems > 99 ? '99+' : totalItems}
+              </span>
+            )}
           </button>
 
           {/* USER PROFILE */}
@@ -171,7 +214,11 @@ export default function Navbar() {
             type="button"
             aria-label="User profile"
             className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-blue-300 bg-blue-600 text-base font-bold text-white shadow-sm transition hover:bg-[#123A8C]"
-            onClick={() => navigate('/profile')}
+            onClick={() => {
+              if (requireLogin()) {
+                navigate('/profile');
+              }
+            }}
           >
             {userInitial}
           </button>

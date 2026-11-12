@@ -1,10 +1,13 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import {
   Footprints,
   ShoppingBag,
   Tag,
-  Star
+  Star,
+  X
 } from 'lucide-react';
 
 interface AuthLayoutProps {
@@ -17,6 +20,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   children,
   activeTab
 }) => {
+  const navigate = useNavigate();
+
   const features = [
     { icon: Footprints, label: 'COMFORT' },
     { icon: Star, label: 'QUALITY' },
@@ -200,7 +205,27 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           key={activeTab}
           className="relative z-10 w-full max-w-sm auth-form-enter"
         >
+          {/* X BUTTON */}
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Continue browsing"
+            title="Continue browsing"
+            className="absolute -top-3 right-0 flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-[#D7192D]"
+          >
+            <X size={22} />
+          </button>
+
           {children}
+
+          {/* CONTINUE BROWSING BUTTON */}
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="mt-5 flex w-full items-center justify-center gap-2 text-sm font-semibold text-[#123A8C] transition hover:text-[#D7192D]"
+          >
+            ← Continue Browsing
+          </button>
         </div>
 
         {/* Bottom footer */}
