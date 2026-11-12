@@ -6,17 +6,49 @@ import instalogo from '../../../assets/images/instalogo.png';
 import facebooklogo from '../../../assets/images/facebooklogo.png';
 import xlogo from '../../../assets/images/xlogo.png';
 
+import { supabase } from '../../../lib/supabaseClient';
+
 export default function Footer() {
   const [email, setEmail] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubscribe = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubscribe = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!email.trim()) return;
+    const cleanEmail = email.trim().toLowerCase();
 
-    setSubscribed(true);
-    setEmail('');
+    if (!cleanEmail) return;
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'send-welcome-coupon',
+        {
+          body: { email: cleanEmail },
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.success) {
+        setMessage(data?.message || 'Unable to send your voucher. Please try again.');
+        return;
+      }
+
+      setMessage(data.message);
+      setEmail('');
+
+    } catch (error) {
+      console.error('Newsletter error:', error);
+      setMessage('Something went wrong. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const linkStyle =
@@ -138,25 +170,24 @@ export default function Footer() {
               id="footer-email"
               placeholder="Enter your email address"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setSubscribed(false);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full rounded-[3px] border border-[#cbd3e0] bg-white p-[13px] text-sm text-black outline-none focus:border-[#123A8C]"
+              disabled={loading}
+              className="w-full rounded-[3px] border border-[#cbd3e0] bg-white p-[13px] text-sm text-black outline-none focus:border-[#123A8C] disabled:opacity-60"
             />
 
             <button
               type="submit"
-              className="w-full cursor-pointer rounded-[3px] bg-[#123A8C] p-[13px] text-sm font-bold text-white hover:bg-[#0b2b6d]"
+              disabled={loading}
+              className="w-full cursor-pointer rounded-[3px] bg-[#123A8C] p-[13px] text-sm font-bold text-white hover:bg-[#0b2b6d] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              SIGN UP
+              {loading ? 'SENDING...' : 'SIGN UP'}
             </button>
           </form>
 
-          {subscribed && (
+          {message && (
             <p className="mt-3 text-[13px] text-[#123A8C]" role="status">
-              Thank you for your interest in SOLE.!
+              {message}
             </p>
           )}
         </div>
