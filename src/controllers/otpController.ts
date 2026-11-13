@@ -1,17 +1,73 @@
 import type { OTPPayload, AuthResponse, OTPPurpose } from '../views/types/AuthTypes';
+import { supabase } from '../lib/supabaseClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const requestPasswordResetOTP = async (email: string): Promise<AuthResponse> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/password-reset/request`, {
+type ApiResponse = Partial<AuthResponse>;
+
+function isApiResponse(value: unknown): value is ApiResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'success' in value &&
+    typeof value.success === 'boolean'
+  );
+}
+
+async function getFunctionErrorMessage(error: Error): Promise<string> {
+  if ('context' in error && error.context instanceof Response) {
+    const payload: unknown = await error.context.json().catch(() => null);
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'message' in payload &&
+      typeof payload.message === 'string'
+    ) {
+      return payload.message;
+    }
+  }
+  return error.message;
+}
+
+async function callAuthApi(
+  path: string,
+  action: string,
+  payload: Record<string, unknown>
+): Promise<ApiResponse> {
+  if (import.meta.env.DEV) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      body: JSON.stringify(payload),
     });
-    const data = await response.json();
+    const data: unknown = await response.json().catch(() => null);
+    if (!isApiResponse(data)) {
+      throw new Error(response.ok ? 'Invalid response from authentication service.' : response.statusText);
+    }
+    return data;
+  }
 
-    if (!response.ok || !data.success) {
+  const { data, error } = await supabase.functions.invoke<ApiResponse>('auth-otp', {
+    body: { action, ...payload },
+  });
+  if (error) {
+    return { success: false, message: await getFunctionErrorMessage(error) };
+  }
+  if (!isApiResponse(data)) {
+    throw new Error('Invalid response from authentication service.');
+  }
+  return data;
+}
+
+export const requestPasswordResetOTP = async (email: string): Promise<AuthResponse> => {
+  try {
+    const data = await callAuthApi(
+      '/api/password-reset/request',
+      'request-password-reset',
+      { email: email.trim().toLowerCase() }
+    );
+
+    if (!data.success) {
       return {
         success: false,
         message: data.message || 'Unable to send a password reset code.',
@@ -40,14 +96,13 @@ export const verifyPasswordResetOTP = async (
   code: string
 ): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/password-reset/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash, code }),
-    });
-    const data = await response.json();
+    const data = await callAuthApi(
+      '/api/password-reset/verify',
+      'verify-password-reset',
+      { hash, code }
+    );
 
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       return {
         success: false,
         message: data.message || 'Invalid or expired verification code.',
@@ -73,14 +128,13 @@ export const completePasswordReset = async (
   password: string
 ): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/password-reset/complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resetToken, password }),
-    });
-    const data = await response.json();
+    const data = await callAuthApi(
+      '/api/password-reset/complete',
+      'complete-password-reset',
+      { resetToken, password }
+    );
 
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       return {
         success: false,
         message: data.message || 'Unable to update your password.',
@@ -138,25 +192,13 @@ export const sendPhilSMSOTP = async (
     // Always normalize to 639XXXXXXXXX format for consistent backend API payloads
     const normalizedPhone = normalizePhone(rawPhone);
 
-    console.log('Sending payload to backend:', {
-      phone: normalizedPhone,
-      purpose: normalizedPurpose
-    });
+    const data = await callAuthApi(
+      '/api/otp/send',
+      'send-otp',
+      { phone: normalizedPhone, purpose: normalizedPurpose }
+    );
 
-    const response = await fetch(`${API_BASE_URL}/api/otp/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phone: normalizedPhone,
-        purpose: normalizedPurpose,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       return {
         success: false,
         message: data.message || 'Unable to send OTP via PhilSMS.',
@@ -202,22 +244,18 @@ export const verifyPhilSMSOTP = async (
       };
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/otp/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const data = await callAuthApi(
+      '/api/otp/verify',
+      'verify-otp',
+      {
         phone: normalizedPhone,
         code: payload.code.trim(),
         purpose: normalizedPurpose,
         hash: payload.hash,
-      }),
-    });
+      }
+    );
 
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
+    if (!data.success) {
       return {
         success: false,
         message: data.message || 'Invalid or expired OTP code.',

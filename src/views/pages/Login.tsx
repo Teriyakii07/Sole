@@ -17,6 +17,7 @@ import {
   verifyPasswordResetOTP
 } from '../../controllers/otpController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
+import { OTPModal } from '../components/Auth/OTPModal';
 
 type PasswordResetStep = 'email' | 'otp' | 'password' | 'complete';
 
@@ -51,8 +52,9 @@ export const LoginPage: React.FC = () => {
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
   const [resetStep, setResetStep] = useState<PasswordResetStep>('email');
-  const [resetOtp, setResetOtp] = useState('');
   const [resetOtpHash, setResetOtpHash] = useState('');
+  const [resetOtpCreatedAt, setResetOtpCreatedAt] = useState(0);
+  const [isResetOtpModalOpen, setIsResetOtpModalOpen] = useState(false);
   const [resetToken, setResetToken] = useState('');
   const [resetPhone, setResetPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -163,41 +165,17 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setIsResetLoading(true);
     try {
       const response = await requestPasswordResetOTP(resetEmail);
-      if (!response.success || !response.otpHash || !response.phone) {
+      if (!response.success || !response.otpHash || !response.phone || !response.createdAt) {
         setResetError(response.message || 'Unable to send a password reset code.');
         return;
       }
 
       setResetOtpHash(response.otpHash);
+      setResetOtpCreatedAt(response.createdAt);
       setResetPhone(response.phone);
       setResetStep('otp');
+      setIsResetOtpModalOpen(true);
       setResetMessage(`A verification code was sent to ${response.phone}.`);
-    } finally {
-      setIsResetLoading(false);
-    }
-  };
-
-  const handleVerifyResetOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetMessage('');
-    setResetError('');
-
-    if (!/^\d{6}$/.test(resetOtp)) {
-      setResetError('Please enter the 6-digit code sent to your phone.');
-      return;
-    }
-
-    setIsResetLoading(true);
-    try {
-      const response = await verifyPasswordResetOTP(resetOtpHash, resetOtp);
-      if (!response.success || !response.resetToken) {
-        setResetError(response.message || 'Unable to verify your code.');
-        return;
-      }
-
-      setResetToken(response.resetToken);
-      setResetStep('password');
-      setResetMessage('');
     } finally {
       setIsResetLoading(false);
     }
@@ -238,8 +216,9 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setResetEmail('');
     setResetMessage('');
     setResetError('');
-    setResetOtp('');
     setResetOtpHash('');
+    setResetOtpCreatedAt(0);
+    setIsResetOtpModalOpen(false);
     setResetToken('');
     setResetPhone('');
     setNewPassword('');
@@ -323,13 +302,15 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         {/* FORGOT PASSWORD */}
         {isForgotPassView ? (
           <form
-            onSubmit={
-              resetStep === 'email'
-                ? handleForgotPassword
-                : resetStep === 'otp'
-                  ? handleVerifyResetOTP
-                  : handleCompletePasswordReset
-            }
+            onSubmit={(event) => {
+              if (resetStep === 'email') {
+                void handleForgotPassword(event);
+              } else if (resetStep === 'password') {
+                void handleCompletePasswordReset(event);
+              } else {
+                event.preventDefault();
+              }
+            }}
             className="space-y-5"
             noValidate
           >
@@ -361,25 +342,12 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             </div>}
 
             {resetStep === 'otp' && (
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600">
-                  SMS Verification Code
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={resetOtp}
-                  onChange={(e) => {
-                    setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-                    setResetError('');
-                  }}
-                  placeholder="Enter 6-digit code"
-                  className={inputClass(!!resetError)}
-                />
-                <p className="mt-2 text-xs text-slate-500">
-                  Code sent to {resetPhone}.
+              <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+                <p className="text-sm font-semibold text-[#123A8C]">
+                  SMS code sent to {resetPhone}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Enter the 6-digit code in the verification window.
                 </p>
               </div>
             )}
@@ -447,7 +415,7 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
               </div>
             )}
 
-            {resetStep !== 'complete' && (
+            {resetStep === 'email' && (
               <button
                 type="submit"
                 disabled={isResetLoading}
@@ -458,10 +426,33 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     <Loader2 size={18} className="animate-spin" />
                     Processing...
                   </>
-                ) : resetStep === 'email' ? (
+                ) : (
                   'Send SMS Code'
-                ) : resetStep === 'otp' ? (
-                  'Verify Code'
+                )}
+              </button>
+            )}
+
+            {resetStep === 'otp' && (
+              <button
+                type="button"
+                onClick={() => setIsResetOtpModalOpen(true)}
+                className="w-full rounded-xl bg-[#123A8C] py-3.5 text-sm font-bold text-white transition hover:bg-blue-900"
+              >
+                Enter Verification Code
+              </button>
+            )}
+
+            {resetStep === 'password' && (
+              <button
+                type="submit"
+                disabled={isResetLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#123A8C] py-3.5 text-sm font-bold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResetLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Processing...
+                  </>
                 ) : (
                   'Update Password'
                 )}
@@ -623,6 +614,28 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       </div>
 
       {/* 2FA LOGIN OTP MODAL */}
+      <OTPModal
+        key={isResetOtpModalOpen ? resetOtpHash : 'closed'}
+        isOpen={isResetOtpModalOpen}
+        phone={resetPhone}
+        purpose="PASSWORD_RESET"
+        hash={resetOtpHash}
+        createdAt={resetOtpCreatedAt}
+        onClose={() => setIsResetOtpModalOpen(false)}
+        verifyCode={(code) => verifyPasswordResetOTP(resetOtpHash, code)}
+        onSuccess={(response) => {
+          if (!response.resetToken) {
+            setResetError('Unable to continue password reset. Request a new code.');
+            return;
+          }
+          setResetToken(response.resetToken);
+          setResetStep('password');
+          setResetMessage('');
+          setResetError('');
+          setIsResetOtpModalOpen(false);
+        }}
+      />
+
       {/* <OTPModal
         isOpen={showOTP}
         phone={otpPhone}

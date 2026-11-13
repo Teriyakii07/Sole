@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import {
   ShieldCheck,
@@ -10,16 +10,24 @@ import {
 } from 'lucide-react';
 
 import { verifyPhilSMSOTP } from '../../../controllers/otpController';
-import type { OTPPayload } from '../../types/AuthTypes';
+import type { AuthResponse, OTPPayload } from '../../types/AuthTypes';
 
 interface OTPModalProps {
   isOpen: boolean;
   phone: string;
-  purpose: 'REGISTRATION' | '2FA_LOGIN' | 'registration' | '2fa_login' | 'login';
+  purpose:
+    | 'REGISTRATION'
+    | '2FA_LOGIN'
+    | 'PASSWORD_RESET'
+    | 'registration'
+    | '2fa_login'
+    | 'password_reset'
+    | 'login';
   hash: string;
   createdAt: number;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (response: AuthResponse) => void;
+  verifyCode?: (code: string) => Promise<AuthResponse>;
 }
 
 export const OTPModal: React.FC<OTPModalProps> = ({
@@ -29,7 +37,8 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   hash,
   createdAt,
   onClose,
-  onSuccess
+  onSuccess,
+  verifyCode
 }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
@@ -42,22 +51,16 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   const title =
     normalizedPurpose === 'registration'
       ? 'Verify Your Account'
+      : normalizedPurpose === 'password_reset'
+        ? 'Verify Password Reset'
       : 'Two-Step Verification';
 
   const description =
     normalizedPurpose === 'registration'
       ? 'Enter the verification code to complete your registration.'
+      : normalizedPurpose === 'password_reset'
+        ? 'Enter the code sent to your phone to continue resetting your password.'
       : 'Enter the security code to continue signing in.';
-
-  useEffect(() => {
-    if (isOpen) {
-      setOtp(['', '', '', '', '', '']);
-      setError('');
-      setIsLoading(false);
-
-      inputRefs.current[0]?.focus();
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -177,18 +180,27 @@ export const OTPModal: React.FC<OTPModalProps> = ({
 
     try {
       // Safely convert purpose to lowercase to pass backend validation
-      const payload: OTPPayload = {
-        phone,
-        code,
-        purpose: purpose.toLowerCase() as OTPPayload['purpose'],
-        hash,
-        createdAt
-      };
+      let res: AuthResponse;
+      if (verifyCode) {
+        res = await verifyCode(code);
+      } else {
+        if (normalizedPurpose === 'password_reset') {
+          setError('Password reset verification is not configured.');
+          return;
+        }
 
-      const res = await verifyPhilSMSOTP(payload);
+        const payload: OTPPayload = {
+          phone,
+          code,
+          purpose: normalizedPurpose as OTPPayload['purpose'],
+          hash,
+          createdAt
+        };
+        res = await verifyPhilSMSOTP(payload);
+      }
 
       if (res.success) {
-        onSuccess();
+        onSuccess(res);
       } else {
         setError(
           res.message ||
@@ -212,8 +224,9 @@ export const OTPModal: React.FC<OTPModalProps> = ({
     }
   };
 
-  const maskedPhone =
-    phone.length > 4
+  const maskedPhone = phone.includes('*')
+    ? phone
+    : phone.length > 4
       ? `${phone.slice(0, 4)}${'*'.repeat(
           Math.max(0, phone.length - 6)
         )}${phone.slice(-2)}`
@@ -321,6 +334,7 @@ export const OTPModal: React.FC<OTPModalProps> = ({
                   id={`otp-input-${index}`}
                   type="text"
                   inputMode="numeric"
+                  autoFocus={index === 0}
                   autoComplete={
                     index === 0 ? 'one-time-code' : 'off'
                   }

@@ -158,6 +158,18 @@ export const handleSignUp = async (
       console.error('Error saving profile to database:', profileError);
     }
 
+    // Keep the new account signed out until phone verification and a later login.
+    if (signUpData.session) {
+      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+      if (signOutError) {
+        console.error('Unable to end temporary signup session:', signOutError);
+        return {
+          success: false,
+          message: 'Your account was created, but we could not safely end the signup session. Please try again.',
+        };
+      }
+    }
+
     // 3. Trigger PhilSMS OTP
     const otpResult = await sendPhilSMSOTP(phone, 'registration');
 
