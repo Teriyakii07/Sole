@@ -8,7 +8,6 @@ import {
   Package,
   Loader2,
 } from 'lucide-react';
-
 import type {
   Product,
   ProductFormData,
@@ -97,14 +96,11 @@ export default function ProductManagement({
   const [showMasterForm, setShowMasterForm] = useState<
     'brand' | 'category' | null
     >(null);
-
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
-
-    const [masterName, setMasterName] = useState('');
-    const [masterDescription, setMasterDescription] = useState('');
-    const [isSavingMaster, setIsSavingMaster] = useState(false);
-
+  const [masterName, setMasterName] = useState('');
+  const [masterDescription, setMasterDescription] = useState('');
+  const [isSavingMaster, setIsSavingMaster] = useState(false);
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -147,30 +143,30 @@ export default function ProductManagement({
     setImageFile(null);
   };
 
-const openEditVariant = (
-  product: Product,
-  variant: ProductVariant
-) => {
-  setEditingProduct(product);
-  setSelectedVariant(variant);
+  const openEditVariant = (
+    product: Product,
+    variant: ProductVariant
+  ) => {
+    setEditingProduct(product);
+    setSelectedVariant(variant);
 
-  setVariantForm({
-    size_label: variant.size_label,
-    size_system: variant.size_system,
-    color: variant.color,
-    price: Number(variant.price),
-    compare_at_price:
-      variant.compare_at_price === null
-        ? null
-        : Number(variant.compare_at_price),
-    stock_quantity: variant.stock_quantity,
-    is_active: variant.is_active,
-  });
+    setVariantForm({
+      size_label: variant.size_label,
+      size_system: variant.size_system,
+      color: variant.color,
+      price: Number(variant.price),
+      compare_at_price:
+        variant.compare_at_price === null
+          ? null
+          : Number(variant.compare_at_price),
+      stock_quantity: variant.stock_quantity,
+      is_active: variant.is_active,
+    });
 
-  setImageFile(null);
-  setFormMode('variant');
-  setShowForm(true);
-};
+    setImageFile(null);
+    setFormMode('variant');
+    setShowForm(true);
+  };
 
   const closeForm = () => {
     setShowForm(false);
@@ -179,40 +175,40 @@ const openEditVariant = (
     setImageFile(null);
   };
 
-const handleSubmit = async (
-  event: FormEvent<HTMLFormElement>
-) => {
-  event.preventDefault();
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
 
-  let success = false;
+    let success = false;
 
-  if (formMode === 'create') {
-    if (!imageFile) {
-      alert('Please upload a product image.');
-      return;
+    if (formMode === 'create') {
+      if (!imageFile) {
+        alert('Please upload a product image.');
+        return;
+      }
+
+      success = await onCreate(
+        productForm,
+        variantForm,
+        imageFile
+      );
+    } else if (formMode === 'edit' && editingProduct) {
+      success = await onUpdate(
+        editingProduct.id,
+        productForm,
+        imageFile
+      );
+    } else if (formMode === 'variant' && editingProduct) {
+      success = selectedVariant
+        ? await onUpdateVariant(selectedVariant, variantForm)
+        : await onAddVariant(editingProduct.id, variantForm);
     }
 
-    success = await onCreate(
-      productForm,
-      variantForm,
-      imageFile
-    );
-  } else if (formMode === 'edit' && editingProduct) {
-    success = await onUpdate(
-      editingProduct.id,
-      productForm,
-      imageFile
-    );
-  } else if (formMode === 'variant' && editingProduct) {
-    success = selectedVariant
-      ? await onUpdateVariant(selectedVariant, variantForm)
-      : await onAddVariant(editingProduct.id, variantForm);
-  }
-
-  if (success) {
-    closeForm();
-  }
-};
+    if (success) {
+      closeForm();
+    }
+  };
 
   const handleMasterSubmit = async (
     event: FormEvent<HTMLFormElement>
@@ -262,9 +258,7 @@ const handleSubmit = async (
   return () => {
     URL.revokeObjectURL(previewUrl);
   };
-}, [imageFile]);
-
-    
+  }, [imageFile]);
 
   const inputClass =
     'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-[#123A8C] focus:ring-1 focus:ring-[#123A8C]';
@@ -284,38 +278,38 @@ const handleSubmit = async (
 
         
 {/* Brand and Category Management */}
-<div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
 
-  {/* Brands */}
-  <div>
-    <button
-      onClick={() => {
-        setShowMasterForm('brand');
-        setMasterName('');
-        setMasterDescription('');
-      }}
-      className="mt-4 flex items-center gap-2 rounded-lg bg-[#123A8C] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d2d6d]"
-    >
-      <Plus size={16} />
-      Add Brand
-    </button>
-  </div>
+          {/* Brands */}
+          <div>
+            <button
+              onClick={() => {
+                setShowMasterForm('brand');
+                setMasterName('');
+                setMasterDescription('');
+              }}
+              className="mt-4 flex items-center gap-2 rounded-lg bg-[#123A8C] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d2d6d]"
+            >
+              <Plus size={16} />
+              Add Brand
+            </button>
+          </div>
 
-  {/* Categories */}
-  <div>
-    <button
-      onClick={() => {
-        setShowMasterForm('category');
-        setMasterName('');
-        setMasterDescription('');
-      }}
-      className="mt-4 flex items-center gap-2 rounded-lg bg-[#D7192D] px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-    >
-      <Plus size={16} />
-      Add Category
-    </button>
-  </div>
-</div>
+          {/* Categories */}
+          <div>
+            <button
+              onClick={() => {
+                setShowMasterForm('category');
+                setMasterName('');
+                setMasterDescription('');
+              }}
+              className="mt-4 flex items-center gap-2 rounded-lg bg-[#D7192D] px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              <Plus size={16} />
+              Add Category
+            </button>
+          </div>
+        </div>
 
 {/* Create Brand / Category Modal */}
 {showMasterForm && (

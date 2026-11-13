@@ -14,28 +14,21 @@ import { SOLE_STORE_ADDRESS } from '../../config/delivery';
 
 export default function Checkout() {
   const { cart, totalItems, subtotal, removeItem } = useCartController();
-
   const {
     profile,
     addresses,
     loading,
     error,
   } = useProfileController();
-
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
-
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderMessage, setOrderMessage] = useState('');
   const [orderError, setOrderError] = useState('');
-
-  // STORE PURCHASED ITEMS FOR CONFIRMATION DISPLAY
   const [purchasedItems, setPurchasedItems] = useState<typeof cart>([]);
-  const [purchasedOrderNumber, setPurchasedOrderNumber] = useState('');
-
+  const [purchasedOrderNumber, setPurchasedOrderNumber] = useState('')
   const shippingFee = subtotal >= 3000 ? 0 : 150;
   const total = subtotal + shippingFee;
-
   const selectedAddress =
     addresses.find((address) => address.id === selectedAddressId) ||
     addresses.find((address) => address.is_default) ||
@@ -261,8 +254,6 @@ try {
     }
   }
 
-  // PURCHASE CONFIRMATION ON THE SAME CHECKOUT PAGE
-  // CHECK ORDER NUMBER, NOT EMAIL MESSAGE
   if (purchasedOrderNumber) {
     return (
       <div className="min-h-screen bg-white py-12 px-4 sm:px-6">
@@ -348,7 +339,7 @@ try {
     );
   }
 
-  // EMPTY CART (ONLY WHEN THERE IS NO COMPLETED PURCHASE)
+  //cart
   if (cart.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F6FA]">
@@ -370,7 +361,6 @@ try {
     );
   }
 
-  // LOADING
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

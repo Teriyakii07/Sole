@@ -8,7 +8,6 @@ import type {
 import { sendPhilSMSOTP } from './otpController';
 import { supabase } from '../lib/supabaseClient';
 
-// Helper function to format any PH number (+639..., 639..., 09...) into 639XXXXXXXXX
 function formatPhilippinePhone(phone: string): string {
   if (!phone) return '';
   let cleaned = phone.replace(/[\s()-]/g, '');
@@ -23,8 +22,6 @@ function formatPhilippinePhone(phone: string): string {
 
   return cleaned;
 }
-
-// Session from a correct password, held in memory until the OTP is verified.
 
 export async function handleLogin(
   credentials: LoginPayload
@@ -80,7 +77,6 @@ export async function handleLogin(
     };
   }
 }
-
 
 export const handleSignUp = async (
   data: SignUpPayload
@@ -149,8 +145,6 @@ export const handleSignUp = async (
   }
 };
 
-// Call this ONLY after the registration OTP has been verified.
-
 export const completeSignUp = async (
   data: SignUpPayload
 ): Promise<AuthResponse> => {
@@ -215,8 +209,6 @@ export const completeSignUp = async (
     };
   }
 };
-
-
 
 export async function handleLogout(): Promise<AuthResponse> {
   const { error } = await supabase.auth.signOut();

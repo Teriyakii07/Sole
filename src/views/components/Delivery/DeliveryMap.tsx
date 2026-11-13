@@ -2,16 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as maptilersdk from "@maptiler/sdk";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
-
 import {
   getDeliveryTracking,
   getDeliveryRoute,
   initializeDeliveryTracking,
   geocodeDeliveryAddress,
 } from "../../../controllers/deliveryTrackingController";
-
 import { SOLE_STORE_ADDRESS } from "../../../config/delivery";
-
 import type {
   DeliveryTrackingResponse,
 } from "../../../models/DeliveryTracking";
@@ -33,81 +30,78 @@ export default function DeliveryMap({ orderId }: Props) {
   const [error, setError] = useState("");
 
   // Load delivery tracking information
-useEffect(() => {
-  let cancelled = false;
+    useEffect(() => {
+    let cancelled = false;
 
-  async function loadTracking() {
-    try {
-      setLoading(true);
-      setError("");
+    async function loadTracking() {
+        try {
+        setLoading(true);
+        setError("");
 
-      const result = await getDeliveryTracking(orderId);
+        const result = await getDeliveryTracking(orderId);
 
-      // Recover orders that do not have a tracking record yet.
-      if (!result.tracking) {
-        const storeLocation = await geocodeDeliveryAddress(
-          SOLE_STORE_ADDRESS
-        );
+        // Recover orders that do not have a tracking record yet.
+        if (!result.tracking) {
+            const storeLocation = await geocodeDeliveryAddress(
+            SOLE_STORE_ADDRESS
+            );
 
-        const fullDeliveryAddress = [
-          result.order.address_line,
-          result.order.address_line_2,
-          result.order.barangay,
-          result.order.city,
-          result.order.province,
-          result.order.postal_code,
-          result.order.country || "Philippines",
-        ]
-          .filter(Boolean)
-          .join(", ");
+            const fullDeliveryAddress = [
+            result.order.address_line,
+            result.order.address_line_2,
+            result.order.barangay,
+            result.order.city,
+            result.order.province,
+            result.order.postal_code,
+            result.order.country || "Philippines",
+            ]
+            .filter(Boolean)
+            .join(", ");
 
-        const destination = await geocodeDeliveryAddress(
-          fullDeliveryAddress
-        );
+            const destination = await geocodeDeliveryAddress(
+            fullDeliveryAddress
+            );
 
-        await initializeDeliveryTracking(
-          orderId,
-          storeLocation,
-          destination
-        );
+            await initializeDeliveryTracking(
+            orderId,
+            storeLocation,
+            destination
+            );
 
-        const refreshedResult = await getDeliveryTracking(orderId);
+            const refreshedResult = await getDeliveryTracking(orderId);
 
-        if (cancelled) return;
+            if (cancelled) return;
 
-        setData(refreshedResult);
-      } else {
-        if (cancelled) return;
+            setData(refreshedResult);
+        } else {
+            if (cancelled) return;
 
-        setData(result);
-      }
-    } catch (err) {
-      console.error("Delivery tracking error:", err);
+            setData(result);
+        }
+        } catch (err) {
+        console.error("Delivery tracking error:", err);
 
-      if (!cancelled) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to initialize delivery tracking."
-        );
-      }
-    } finally {
-      if (!cancelled) {
-        setLoading(false);
-      }
+        if (!cancelled) {
+            setError(
+            err instanceof Error
+                ? err.message
+                : "Unable to initialize delivery tracking."
+            );
+        }
+        } finally {
+        if (!cancelled) {
+            setLoading(false);
+        }
+        }
     }
-  }
 
-  loadTracking();
+    loadTracking();
 
-  return () => {
-    cancelled = true;
-  };
-}, [orderId]);
+    return () => {
+        cancelled = true;
+    };
+    }, [orderId]);
 
-  // Initialize MapTiler map
-
-  // Initialize MapTiler map
   useEffect(() => {
     if (!data?.tracking || !mapContainer.current) return;
 
@@ -217,8 +211,6 @@ useEffect(() => {
     };
   }, [data]);
 
-
-  // Loading state
   if (loading) {
     return (
       <div className="p-6 text-center text-gray-500">
@@ -227,7 +219,6 @@ useEffect(() => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -238,7 +229,6 @@ useEffect(() => {
     );
   }
 
-  // No tracking information
   if (!data?.tracking) {
     return (
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
@@ -254,7 +244,6 @@ useEffect(() => {
     );
   }
 
-  // Safe to access tracking after the null check above
   const tracking = data.tracking;
 
   return (

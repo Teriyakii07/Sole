@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 
 import { useAuthPrompt } from '../../context/AuthPromptContext';
-
 import { getProductById } from '../../controllers/productControllers';
 import { useCartController } from '../../controllers/cartControllers';
 import {
@@ -20,7 +19,6 @@ import {
   toggleFavorite,
   subscribeToFavorites,
 } from '../../controllers/favoritesControllers';
-
 import type { Product } from '../../models/Product';
 
 const shoeSizes = [
@@ -31,19 +29,14 @@ const shoeSizes = [
 export default function ProductCatalog() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const { addToCart } = useCartController();
   const { requireLogin } = useAuthPrompt();
-
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
-
-  // NOTIFICATION STATE
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error' | '';
@@ -52,7 +45,6 @@ export default function ProductCatalog() {
     type: '',
   });
 
-  // SHOW NOTIFICATION
   function showNotification(
     message: string,
     type: 'success' | 'error'
@@ -64,7 +56,7 @@ export default function ProductCatalog() {
     }, 3000);
   }
 
-  // LOAD PRODUCT
+  // load product
   useEffect(() => {
     let isMounted = true;
 
@@ -107,7 +99,7 @@ export default function ProductCatalog() {
     };
   }, [id]);
 
-  // CHECK AND SYNC FAVORITE STATUS
+  // synch favorites
   useEffect(() => {
     if (!product) return;
 
@@ -131,7 +123,7 @@ export default function ProductCatalog() {
     );
   }
 
-  // PRODUCT NOT FOUND
+  // product not fount
   if (error || !product) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
@@ -158,15 +150,12 @@ export default function ProductCatalog() {
 
   // PRODUCT IS GUARANTEED TO EXIST BELOW THIS POINT
   const currentProduct = product;
-
   const isOutOfStock = currentProduct.stockCount === 0;
-
   const maximumQuantity =
     typeof currentProduct.stockCount === 'number'
       ? Math.max(1, Math.min(currentProduct.stockCount, 99))
       : 99;
 
-  // ADD TO CART OR BUY NOW
   function handleAddToBag(goToCheckout = false) {
     // Require login before adding anything to the cart.
     if (!requireLogin()) return;
@@ -193,7 +182,6 @@ export default function ProductCatalog() {
     }
   }
 
-  // ADD OR REMOVE FAVORITE
   function handleToggleFavorite() {
     // Require login before changing favorites.
     if (!requireLogin()) return;

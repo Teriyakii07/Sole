@@ -12,13 +12,10 @@ export default function AdminRoute() {
       </div>
     );
   }
-
-  // Not logged in: return to login.
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Role cannot be verified or is not admin: return home.
   if (role !== 'admin') {
     return <Navigate to="/" replace />;
   }

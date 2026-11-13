@@ -2,12 +2,10 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Check, AlertCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 import type { Product } from '../../../models/Product';
 import ProductCard from './ProductCard';
 import { useCartController } from '../../../controllers/cartControllers';
 import { useAuthPrompt } from '../../../context/AuthPromptContext';
-
 import {
   getFavorites,
   toggleFavorite as toggleSavedFavorite,
@@ -35,7 +33,7 @@ export default function NewArrivals({
   const { addToCart, totalItems } = useCartController();
   const { requireLogin } = useAuthPrompt();
 
-  // Load and synchronize favorites with the Favorites page
+  // load and sync favorites
   useEffect(() => {
     const updateFavorites = () => {
       setFavorites(getFavorites().map((item) => String(item.id)));

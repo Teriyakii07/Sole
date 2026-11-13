@@ -1,17 +1,12 @@
-
 import { useEffect, useState } from 'react';
-
 import Hero from '../components/Home/Hero';
 import CategorySection from '../components/Home/CategorySection';
 import NewArrivals from '../components/Home/NewArrivals';
 import PromoBanner from '../components/Home/PromoBanner';
-
-
 import {
   getHomepageCategories,
   getHomepageProducts,
 } from '../../controllers/productControllers';
-
 import type {
   Product,
   HomeCategory,

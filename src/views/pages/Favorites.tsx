@@ -8,21 +8,18 @@ import {
   ArrowRight,
   ArrowLeft,
 } from 'lucide-react';
-
 import {
   getFavorites,
   removeFavorite,
   subscribeToFavorites,
 } from '../../controllers/favoritesControllers';
-
 import type { FavoriteItem } from '../../controllers/favoritesControllers';
 
 export default function Favorites() {
   const navigate = useNavigate();
-
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
 
-  // LOAD AND SYNC FAVORITES
+  // load and sync favorites
   useEffect(() => {
     const updateFavorites = () => {
       setFavorites(getFavorites());
@@ -33,7 +30,6 @@ export default function Favorites() {
     return subscribeToFavorites(updateFavorites);
   }, []);
 
-  // REMOVE FAVORITE
   function handleRemove(id: string) {
     removeFavorite(id);
     setFavorites(getFavorites());

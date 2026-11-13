@@ -55,8 +55,6 @@ async function callAuthApi(
   return data as AuthResponse;
 }
 
-
-// REGISTRATION: Send OTP
 export async function sendPhilSMSOTP(
   phone: string,
   purpose: 'registration'
@@ -67,7 +65,6 @@ export async function sendPhilSMSOTP(
   });
 }
 
-// REGISTRATION: Verify OTP
 export async function verifyPhilSMSOTP(
   payload: OTPPayload
 ): Promise<AuthResponse> {
@@ -79,7 +76,6 @@ export async function verifyPhilSMSOTP(
   });
 }
 
-// FORGOT PASSWORD: Request OTP
 export async function requestPasswordResetOTP(
   email: string
 ): Promise<AuthResponse> {
@@ -88,7 +84,6 @@ export async function requestPasswordResetOTP(
   });
 }
 
-// FORGOT PASSWORD: Verify OTP
 export async function verifyPasswordResetOTP(
   hash: string,
   code: string
@@ -99,7 +94,6 @@ export async function verifyPasswordResetOTP(
   });
 }
 
-// FORGOT PASSWORD: Update password
 export async function completePasswordReset(
   resetToken: string,
   password: string

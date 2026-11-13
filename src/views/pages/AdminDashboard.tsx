@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
   ArrowUpRight,
 } from 'lucide-react'
-
 import AdminSidebar, {
   type AdminTab,
 } from '../components/Admin/AdminSidebar'
@@ -17,7 +16,6 @@ import { useAdminController } from '../../controllers/adminController'
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('Dashboard')
-
   const {
     stats,
     revenueData,

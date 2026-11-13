@@ -32,33 +32,26 @@ function load<T>(key: string, fallback: T): T {
 
 export function useProfileController() {
   const [tab, setTab] = useState<ProfileTab>('personal');
-
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [addresses, setAddresses] = useState<Address[]>([]);
-
   const [favorites, setFavorites] = useState<Favorite[]>(() =>
     getFavorites()
   );
-
   const [orders, setOrders] = useState<Order[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-
   const { cart, totalItems, subtotal } = useCartController();
 
-  // SYNC FAVORITES
   useEffect(() => {
     return subscribeToFavorites(() => {
       setFavorites(getFavorites());
     });
   }, []);
 
-  // LOAD PROFILE
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -132,7 +125,6 @@ setAddresses(addressResult.data ?? []);
     void loadProfile();
   }, [loadProfile]);
 
-  // SAVE PROFILE
   async function saveProfile(updated: Profile) {
     setSavingProfile(true);
     setError('');
@@ -202,7 +194,6 @@ setAddresses(addressResult.data ?? []);
     }
   }
 
-  // ADD ADDRESS
   async function addAddress(data: AddressFormData) {
     setSavingAddress(true);
     setError('');
@@ -261,7 +252,6 @@ setAddresses(addressResult.data ?? []);
     }
   }
 
-  // UPDATE ADDRESS
   async function updateAddress(id: string, data: AddressFormData) {
     setSavingAddress(true);
     setError('');
@@ -318,7 +308,6 @@ setAddresses(addressResult.data ?? []);
     }
   }
 
-  // DELETE ADDRESS
   async function deleteAddress(id: string) {
     setError('');
     setMessage('');
@@ -348,7 +337,6 @@ setAddresses(addressResult.data ?? []);
     }
   }
 
-  // SET DEFAULT ADDRESS
   async function setDefaultAddress(id: string) {
     setError('');
     setMessage('');
@@ -392,13 +380,11 @@ setAddresses(addressResult.data ?? []);
     }
   }
 
-  // REMOVE FAVORITE FROM PROFILE
   function removeFavorite(id: string) {
     deleteFavorite(id);
     setFavorites(getFavorites());
   }
 
-  // SELECT PROFILE TAB
   function selectTab(next: ProfileTab) {
     setTab(next);
     setSaved(false);

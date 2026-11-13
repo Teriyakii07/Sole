@@ -377,12 +377,9 @@ function PersonalInformation({
 export default function Profile() {
   const c = useProfileController();
   const navigate = useNavigate();
-
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
-
   const onLogout = async () => {
     if (isLoggingOut) return;
 
@@ -405,7 +402,6 @@ export default function Profile() {
       setIsLoggingOut(false);
     }
   };
-
   const count: Record<ProfileTab, number | null> = {
     personal: null,
     favorites: c.favorites.length,

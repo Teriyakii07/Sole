@@ -1,5 +1,4 @@
 import React, { useRef, useState } from 'react';
-
 import {
   ShieldCheck,
   LockKeyhole,
@@ -8,7 +7,6 @@ import {
   Loader2,
   CheckCircle2
 } from 'lucide-react';
-
 import { verifyPhilSMSOTP } from '../../../controllers/otpController';
 import type { AuthResponse, OTPPayload } from '../../types/AuthTypes';
 
@@ -43,11 +41,8 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
   const normalizedPurpose = purpose.toLowerCase();
-
   const title =
     normalizedPurpose === 'registration'
       ? 'Verify Your Account'

@@ -24,7 +24,6 @@ export function useContactController() {
 
   function submitContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // No backend is connected yet. Do not claim that the message was delivered.
     setNotice('Your message is ready, but sending is not connected yet. Please email support directly.')
   }
 

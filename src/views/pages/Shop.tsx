@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
-
 import {
   getHomepageProducts,
   getHomepageCategories,
 } from '../../controllers/productControllers';
-
 import type { Product, HomeCategory } from '../../models/Product';
 
 const formatPrice = (price: number) =>
@@ -18,13 +16,10 @@ const formatPrice = (price: number) =>
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
-
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryList, setCategoryList] = useState<HomeCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // FILTER STATES
   const [search, setSearch] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -32,7 +27,7 @@ export default function Shop() {
   const [maxPrice, setMaxPrice] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
-  // LOAD PRODUCTS AND CATEGORIES
+  //load products and categories
   useEffect(() => {
     async function loadShopData() {
       try {
@@ -60,7 +55,7 @@ export default function Shop() {
     loadShopData();
   }, []);
 
-  // GET CATEGORY FROM URL
+  // from url
   useEffect(() => {
     const categorySlug = searchParams.get('category');
 
@@ -77,7 +72,6 @@ export default function Shop() {
     setSelectedCategory(matchingCategory?.name ?? 'All');
   }, [searchParams, categoryList]);
 
-  // GET UNIQUE BRANDS
   const brands = useMemo(
     () =>
       [
@@ -90,7 +84,6 @@ export default function Shop() {
     [products]
   );
 
-  // FILTER AND SORT PRODUCTS
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
@@ -167,7 +160,6 @@ export default function Shop() {
     sortBy,
   ]);
 
-  // CHANGE CATEGORY
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
 
@@ -185,7 +177,6 @@ export default function Shop() {
     }
   };
 
-  // CLEAR FILTERS
   const clearFilters = () => {
     setSearch('');
     setSelectedBrand('All');

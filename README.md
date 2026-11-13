@@ -144,6 +144,8 @@ Run these commands inside the frontend project directory.
 | `pnpm add -D <package>` | Install a development dependency |
 | `pnpm remove <package>` | Remove a dependency |
 | `pnpm update` | Update dependencies within the allowed version ranges |
+| `pnpm dlx vercel deploy` | Preview deployment |
+| `pnpm dlx vercel deploy --prod` | Deploy in production |
 
 ### 🧹 ESLint Commands
 

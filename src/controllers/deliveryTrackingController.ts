@@ -45,7 +45,6 @@ export async function getDeliveryTracking(
   return result as DeliveryTrackingResponse;
 }
 
-// GET: convert a Philippine delivery address into coordinates.
 export async function geocodeDeliveryAddress(
   address: string
 ): Promise<{ lat: number; lng: number }> {
@@ -100,7 +99,6 @@ export async function geocodeDeliveryAddress(
   return { lat, lng };
 }
 
-// POST: initialize tracking for an order.
 export async function initializeDeliveryTracking(
   orderId: string,
   store: DeliveryCoordinates,
@@ -139,7 +137,6 @@ export async function initializeDeliveryTracking(
   return result;
 }
 
-// GET: calculate a road route between the store and customer.
 export async function getDeliveryRoute(
   store: DeliveryCoordinates,
   destination: DeliveryCoordinates

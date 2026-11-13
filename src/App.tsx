@@ -6,17 +6,13 @@ import {
   Outlet,
   useLocation,
 } from 'react-router-dom';
-
 import { AuthProvider } from './context/AuthContext';
 import { AuthPromptProvider } from './context/AuthPromptContext';
-
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
 import GuestRoute from './routes/GuestRoute';
-
 import Navbar from './views/components/Home/Navbar';
 import Footer from './views/components/Home/Footer';
-
 import HomePage from './views/pages/HomePage';
 import ShoppingCartView from './views/pages/Cart';
 import Profile from './views/pages/Profile';

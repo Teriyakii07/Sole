@@ -69,7 +69,6 @@ export function useCartController() {
     });
   }, [cart]);
 
-  // ADD PRODUCT WITH SELECTED SIZE AND QUANTITY
   const addToCart = (
     product: Product,
     size: string,
@@ -107,7 +106,6 @@ export function useCartController() {
     }
   };
 
-  // CHANGE QUANTITY INPUT
   const handleQuantityInputChange = (
     id: string,
     value: string
@@ -118,7 +116,6 @@ export function useCartController() {
     }));
   };
 
-  // UPDATE QUANTITY
   const updateQuantity = (id: string): void => {
     const qty = parseInt(String(inputQuantities[id]), 10);
 
@@ -143,7 +140,6 @@ export function useCartController() {
     }));
   };
 
-  // REMOVE PRODUCT
   const removeItem = (id: string): void => {
     saveCart(cartItems.filter((item) => item.id !== id));
 

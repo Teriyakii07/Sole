@@ -10,7 +10,6 @@ export interface FavoriteItem {
   price: number;
   image?: string;
 }
-
 export function getFavorites(): FavoriteItem[] {
   try {
     const saved = localStorage.getItem(FAVORITES_KEY);

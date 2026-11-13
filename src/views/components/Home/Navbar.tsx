@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, NavLink, Link } from 'react-router-dom';
 import { useAuthPrompt } from '../../../context/AuthPromptContext';
-
 import {
   Search,
   Heart,
@@ -10,14 +9,11 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-
 import {
   getFavorites,
   subscribeToFavorites,
 } from '../../../controllers/favoritesControllers';
-
 import { useCartController } from '../../../controllers/cartControllers';
-
 import { supabase } from '../../../lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
@@ -25,14 +21,12 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { requireLogin } = useAuthPrompt();
-
   const [favoriteCount, setFavoriteCount] = useState(0);
   const { totalItems } = useCartController();
-
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  // GET LOGGED-IN USER AND LISTEN FOR AUTH CHANGES
+  // user ang authentication
   useEffect(() => {
     async function getLoggedInUser() {
       const {
@@ -55,7 +49,7 @@ export default function Navbar() {
     };
   }, []);
 
-  // GET AND SYNC FAVORITES COUNT
+  // get and sync favorites
   useEffect(() => {
     const updateFavorites = () => {
       setFavoriteCount(getFavorites().length);
@@ -66,12 +60,11 @@ export default function Navbar() {
     return subscribeToFavorites(updateFavorites);
   }, []);
 
-  // CLOSE MOBILE MENU WHEN PAGE CHANGES
+  // close mobile menu
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // GET FIRST LETTER OF USER NAME
   const userInitial = (
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
@@ -82,7 +75,6 @@ export default function Navbar() {
     .charAt(0)
     .toUpperCase();
 
-  // NAVIGATION LINK STYLE
   const getNavLinkClass = (isActive: boolean) =>
     `relative py-2 text-base font-semibold transition-colors duration-300
     after:absolute after:bottom-0 after:left-0 after:h-[2px]
@@ -94,7 +86,6 @@ export default function Navbar() {
         : 'text-gray-700 after:opacity-0 hover:text-[#123A8C] hover:after:opacity-100'
     }`;
 
-  // CHECK IF SHOP SHOULD BE ACTIVE
   const isShopActive =
     location.pathname === '/shop' ||
     location.pathname.startsWith('/product/');

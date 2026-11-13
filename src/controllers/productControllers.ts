@@ -15,7 +15,6 @@ const categoryImages: Record<string, string> = {
   espadrilles: '/images/products/espadrilles.png',
 };
 
-// GET NAME FROM SUPABASE RELATIONSHIP
 function getRelationName(relation: unknown): string {
   if (Array.isArray(relation)) {
     return relation[0]?.name?.trim() ?? '';
@@ -29,7 +28,6 @@ function getRelationName(relation: unknown): string {
   return '';
 }
 
-// GET HOMEPAGE CATEGORIES
 export async function getHomepageCategories(): Promise<HomeCategory[]> {
   const { data, error } = await supabase
     .from('categories')
@@ -49,7 +47,6 @@ export async function getHomepageCategories(): Promise<HomeCategory[]> {
   }));
 }
 
-// GET HOMEPAGE PRODUCTS
 export async function getHomepageProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
@@ -127,7 +124,6 @@ export async function getHomepageProducts(): Promise<Product[]> {
   );
 }
 
-// GET PRODUCT BY ID
 export async function getProductById(
   id: string
 ): Promise<Product | null> {
