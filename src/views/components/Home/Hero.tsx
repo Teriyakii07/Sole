@@ -1,10 +1,11 @@
 
 import { ArrowRight, ArrowLeft } from 'lucide-react'
+import redShoes from '../../../assets/images/redshoes.png'
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[290px] overflow-hidden bg-sole-red text-white sm:min-h-[320px] lg:min-h-[290px]">
-      <div className="mx-auto grid min-h-[290px] max-w-[1440px] grid-cols-1 items-center px-6 py-8 sm:px-10 lg:grid-cols-2 lg:px-16">
+    <section className="relative overflow-hidden bg-sole-red text-white">
+      <div className="mx-auto grid min-h-[280px] max-w-[1200px] grid-cols-1 items-center px-6 py-7 sm:px-10 lg:min-h-[280px] lg:grid-cols-[0.85fr_1.15fr] lg:px-10 lg:py-5">
 
         {/* Sale content */}
         <div className="relative z-10">
@@ -12,13 +13,15 @@ export default function Hero() {
             LIMITED TIME ONLY
           </p>
 
-          <h1 className="text-5xl leading-[0.86] font-black tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="text-5xl leading-[0.88] font-black tracking-tight sm:text-6xl lg:text-[64px]">
             Season
             <br />
             Sale
           </h1>
 
-          <p className="mt-4 text-xs font-bold">UP TO 70% OFF</p>
+          <p className="mt-3 text-xs font-bold">
+            UP TO 70% OFF
+          </p>
 
           <a
             href="/shop"
@@ -29,28 +32,31 @@ export default function Hero() {
           </a>
         </div>
 
-        {/* Product image */}
-        <div className="relative flex min-h-[150px] items-center justify-center lg:h-full">
+        {/* Product image and slider controls */}
+        <div className="relative flex min-h-[220px] items-center justify-start lg:min-h-[280px]">
           <img
-            src="../../images/sneakers.png"
-            alt="Red, white, and black high-top basketball sneaker"
-            className="relative z-10 w-full max-w-[440px] object-contain drop-shadow-2xl"
-          />
+  src={redShoes}
+  alt="Red, white, and black high-top basketball sneaker"
+  className="relative z-10 h-[270px] w-full max-w-[720px] scale-110 object-contain drop-shadow-2xl sm:h-[300px] lg:h-[350px] lg:scale-125 lg:-translate-x-8"
+/>
 
-          {/* Slider decoration; actual carousel can be added later */}
-          <div className="absolute right-0 top-0 hidden items-center gap-4 lg:flex">
+          {/* Slide number */}
+          <div className="absolute right-0 top-0 z-20 hidden lg:block">
             <span className="text-xs font-bold">01 / 03</span>
           </div>
 
-          <div className="absolute bottom-4 right-0 hidden items-center gap-3 lg:flex">
+          {/* Slider arrows */}
+          <div className="absolute right-0 top-9 z-20 hidden items-center gap-4 lg:flex">
             <button type="button" aria-label="Previous promotion">
               <ArrowLeft size={19} />
             </button>
+
             <button type="button" aria-label="Next promotion">
               <ArrowRight size={19} />
             </button>
           </div>
         </div>
+
       </div>
     </section>
   )
