@@ -1,6 +1,5 @@
-
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 
 import {
@@ -18,6 +17,8 @@ const formatPrice = (price: number) =>
   });
 
 export default function Shop() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryList, setCategoryList] = useState<HomeCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,14 +60,33 @@ export default function Shop() {
     loadShopData();
   }, []);
 
+  // GET CATEGORY FROM URL
+  useEffect(() => {
+    const categorySlug = searchParams.get('category');
+
+    if (!categorySlug) {
+      setSelectedCategory('All');
+      return;
+    }
+
+    const matchingCategory = categoryList.find(
+      (category) =>
+        category.slug?.toLowerCase() === categorySlug.toLowerCase()
+    );
+
+    setSelectedCategory(matchingCategory?.name ?? 'All');
+  }, [searchParams, categoryList]);
+
   // GET UNIQUE BRANDS
   const brands = useMemo(
     () =>
-      [...new Set(
-        products
-          .map((product) => product.brand?.trim())
-          .filter((brand): brand is string => Boolean(brand))
-      )].sort(),
+      [
+        ...new Set(
+          products
+            .map((product) => product.brand?.trim())
+            .filter((brand): brand is string => Boolean(brand))
+        ),
+      ].sort(),
     [products]
   );
 
@@ -147,6 +167,24 @@ export default function Shop() {
     sortBy,
   ]);
 
+  // CHANGE CATEGORY
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+
+    if (value === 'All') {
+      setSearchParams({});
+      return;
+    }
+
+    const matchingCategory = categoryList.find(
+      (category) => category.name === value
+    );
+
+    if (matchingCategory) {
+      setSearchParams({ category: matchingCategory.slug });
+    }
+  };
+
   // CLEAR FILTERS
   const clearFilters = () => {
     setSearch('');
@@ -155,6 +193,7 @@ export default function Shop() {
     setMinPrice('');
     setMaxPrice('');
     setSortBy('newest');
+    setSearchParams({});
   };
 
   const hasActiveFilters =
@@ -166,7 +205,7 @@ export default function Shop() {
 
   return (
     <main className="h-[calc(100dvh-80px+180px)] overflow-hidden bg-white px-4 pb-16 pt-5 sm:px-6 sm:pt-6 lg:px-10">
-      <div className="mx-auto flex h-full max-w-[1440px] flex-col">
+      <div className="mx-auto flex h-full w-full max-w-[1200px] flex-col">
 
         {/* PAGE HEADER */}
         <div className="mb-4 shrink-0">
@@ -279,7 +318,7 @@ export default function Shop() {
 
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="w-full rounded border border-gray-300 bg-white p-3 text-sm outline-none focus:border-[#123A8C]"
               >
                 <option value="All">All Categories</option>
