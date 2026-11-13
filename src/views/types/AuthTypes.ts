@@ -13,8 +13,7 @@ export interface SignUpPayload {
 }
 
 export type OTPPurpose =
-  | 'REGISTRATION'
-  | '2FA_LOGIN';
+  | 'REGISTRATION';
 
 export interface OTPPayload {
   phone: string;
@@ -24,9 +23,10 @@ export interface OTPPayload {
   createdAt?: number;
 }
 
+
 export interface AuthResponse {
   success: boolean;
-  message: string;
+  message?: string;
   requiresOTP?: boolean;
   token?: string;
   phone?: string;
@@ -35,6 +35,7 @@ export interface AuthResponse {
   createdAt?: number;
   resetToken?: string;
 }
+
 
 export interface UserProfile {
   id: string;

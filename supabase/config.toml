@@ -2,4 +2,4 @@ project_id = "sole"
 
 [functions.auth-otp]
 verify_jwt = false
-import_map = "./functions/auth-otp/deno.json"
+

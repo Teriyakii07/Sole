@@ -1,12 +1,23 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://soleshop.vercel.app',
+];
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
 
+  if (origin && allowedOrigins.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
 const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_INTERVAL_MS = 60 * 1000;
 const SESSION_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -19,7 +30,7 @@ interface ApiBody {
 type OtpSession = {
   otp_hash: string;
   phone: string;
-  purpose: "registration" | "2fa_login";
+  purpose: "registration";
   code_hash: string;
   created_at: string;
   expires_at: string;
@@ -90,10 +101,17 @@ function isRecord(value: unknown): value is ApiBody {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function jsonResponse(body: ApiBody, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+function jsonResponse(
+  req: Request,
+  data: unknown,
+  status = 200
+) {
+  return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: {
+      ...getCorsHeaders(req.headers.get('origin')),
+      'Content-Type': 'application/json',
+    },
   });
 }
 
@@ -106,7 +124,7 @@ function normalizePhilippinePhone(value: unknown): string | null {
 }
 
 function isOtpPurpose(value: string): value is OtpPurpose {
-  return value === "registration" || value === "2fa_login";
+  return value === "registration";
 }
 
 function maskPhone(phone: string): string {
@@ -471,82 +489,107 @@ async function verifyOtp(
   };
 }
 
+
 async function findAuthAccountByEmail(
   client: AdminClient,
   email: string,
 ): Promise<{ userId: string; phone: string | null } | null> {
-  const { data: profile, error } = await client
-    .from("profiles")
-    .select("id,phone_number")
-    .eq("email", email)
-    .limit(1)
-    .maybeSingle();
-  checkDbError(error, "Profile lookup");
-
-  const profilePhone = normalizePhilippinePhone(profile?.phone_number);
-  if (typeof profile?.id === "string" && profilePhone) {
-    return { userId: profile.id, phone: profilePhone };
-  }
-
+  const normalizedEmail = email.trim().toLowerCase();
   const perPage = 1000;
-  for (let page = 1;; page += 1) {
-    const { data, error: authError } = await client.auth.admin.listUsers({
+
+  // Find the account in Supabase Auth.
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await client.auth.admin.listUsers({
       page,
       perPage,
     });
-    checkDbError(authError, "Auth account lookup");
 
-    for (const user of data.users) {
-      if (user.email?.toLowerCase() !== email) continue;
-      const candidates = [
-        user.user_metadata?.phone_number,
-        user.user_metadata?.phone,
-        user.phone,
-      ];
-      const phone = candidates.reduce<string | null>(
-        (found, value) => found || normalizePhilippinePhone(value),
-        null,
-      );
-      return { userId: user.id, phone };
+    checkDbError(error, "Auth account lookup");
+
+    const user = data.users.find(
+      (item) => item.email?.toLowerCase() === normalizedEmail,
+    );
+
+    if (user) {
+      // Retrieve the phone number from the user's profile.
+      const { data: profile, error: profileError } = await client
+        .from("profiles")
+        .select("phone_number")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      checkDbError(profileError, "Profile phone lookup");
+
+      const phone = normalizePhilippinePhone(profile?.phone_number);
+
+      return {
+        userId: user.id,
+        phone,
+      };
     }
-    if (data.users.length < perPage) return null;
+
+    if (data.users.length < perPage) {
+      return null;
+    }
   }
 }
+
 
 async function requestPasswordReset(
   client: AdminClient,
   serviceRoleKey: string,
   body: ApiBody,
 ): Promise<ApiBody> {
-  const email = typeof body.email === "string"
-    ? body.email.trim().toLowerCase()
-    : "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new ApiError(400, "Enter a valid email address.");
+  // Validate email input.
+  const email =
+    typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!email) {
+    throw new ApiError(400, "Please enter your email address.");
   }
 
+  if (!emailPattern.test(email)) {
+    throw new ApiError(400, "Please enter a valid email address.");
+  }
+
+  // Check whether the account exists and has a registered phone number.
   const account = await findAuthAccountByEmail(client, email);
-  if (!account?.phone) {
+
+  if (!account) {
     throw new ApiError(
       404,
-      "We couldn't find a valid phone number linked to this email. Check your account details or contact support.",
+      "No account was found with this email address.",
     );
   }
 
+  if (!account.phone) {
+    throw new ApiError(
+      400,
+      "Your account does not have a valid registered Philippine mobile number. Please contact support.",
+    );
+  }
+
+  // Send the password-reset OTP.
   const session = await insertOtpSession(client, serviceRoleKey, {
     phone: account.phone,
     purpose: "password_reset",
     userId: account.userId,
     table: "password_reset_sessions",
   });
+
   return {
     success: true,
     otpHash: session.otpHash,
     createdAt: session.createdAt,
-    message: "Verification code sent via PhilSMS.",
     phone: maskPhone(account.phone),
+    message: "Password-reset verification code sent to your registered phone number.",
   };
 }
+
+
+
 
 async function verifyPasswordReset(
   client: AdminClient,
@@ -723,57 +766,76 @@ async function completePasswordReset(
 }
 
 Deno.serve(async (request: Request): Promise<Response> => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (request.method === 'OPTIONS') {
+    return new Response('ok', {
+      status: 200,
+      headers: getCorsHeaders(request.headers.get('origin')),
+    });
   }
-  if (request.method !== "POST") {
+
+  if (request.method !== 'POST') {
     return jsonResponse(
-      { success: false, message: "Method not allowed." },
-      405,
+      request,
+      { success: false, message: 'Method not allowed.' },
+      405
     );
   }
 
   try {
     const { client, serviceRoleKey } = getClient();
+
     const payload: unknown = await request.json().catch(() => null);
-    if (!isRecord(payload) || typeof payload.action !== "string") {
-      throw new ApiError(400, "Invalid request.");
+
+    if (!isRecord(payload) || typeof payload.action !== 'string') {
+      throw new ApiError(400, 'Invalid request.');
     }
 
     await cleanExpiredSessions(client);
 
     let result: ApiBody;
+
     switch (payload.action) {
-      case "send-otp":
+      case 'send-otp':
         result = await sendOtp(client, serviceRoleKey, payload);
         break;
-      case "verify-otp":
+
+      case 'verify-otp':
         result = await verifyOtp(client, serviceRoleKey, payload);
         break;
-      case "request-password-reset":
+
+      case 'request-password-reset':
         result = await requestPasswordReset(client, serviceRoleKey, payload);
         break;
-      case "verify-password-reset":
+
+      case 'verify-password-reset':
         result = await verifyPasswordReset(client, serviceRoleKey, payload);
         break;
-      case "complete-password-reset":
+
+      case 'complete-password-reset':
         result = await completePasswordReset(client, payload);
         break;
+
       default:
-        throw new ApiError(404, "Authentication action not found.");
+        throw new ApiError(404, 'Authentication action not found.');
     }
-    return jsonResponse(result);
+
+    return jsonResponse(request, result);
+
   } catch (error) {
     if (error instanceof ApiError) {
       return jsonResponse(
+        request,
         { success: false, message: error.publicMessage },
-        error.status,
+        error.status
       );
     }
-    console.error("Supabase auth-otp function failed:", error);
+
+    console.error('Supabase auth-otp function failed:', error);
+
     return jsonResponse(
-      { success: false, message: "Internal server error." },
-      500,
+      request,
+      { success: false, message: 'Internal server error.' },
+      500
     );
   }
 });

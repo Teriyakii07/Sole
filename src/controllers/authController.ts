@@ -81,18 +81,16 @@ export async function handleLogin(
   }
 }
 
+
 export const handleSignUp = async (
   data: SignUpPayload
 ): Promise<AuthResponse> => {
   try {
     if (data.password !== data.confirmPassword) {
-      return {
-        success: false,
-        message: 'Passwords do not match.'
-      };
+      return { success: false, message: 'Passwords do not match.' };
     }
 
-    if (data.password.length < 8) {
+    if (data.password.length < 8 || !data.password.trim()) {
       return {
         success: false,
         message: 'Password must contain at least 8 characters.'
@@ -114,89 +112,111 @@ export const handleSignUp = async (
       };
     }
 
-    if (!/^(639\d{9})$/.test(phone)) {
+    if (!/^639\d{9}$/.test(phone)) {
       return {
         success: false,
-        message: 'Please enter a valid Philippine phone number starting with 09, 639, or +639.'
+        message: 'Please enter a valid Philippine phone number.'
       };
     }
 
-    // 1. Create User in Supabase Auth
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: email,
-      password: data.password,
-      options: {
-        data: {
-          first_name: data.firstName.trim(),
-          last_name: data.lastName.trim(),
-          full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
-          phone_number: phone,
-          phone: phone
-        }
-      }
-    });
-
-    if (signUpError || !signUpData.user) {
-      return {
-        success: false,
-        message: signUpError?.message || 'Failed to register account with Supabase Auth.'
-      };
-    }
-
-    // 2. Save user details to profiles table (persisting email column for phone logins)
-    const { error: profileError } = await supabase.from('profiles').upsert([
-      {
-        id: signUpData.user.id,
-        email: email,
-        first_name: data.firstName.trim(),
-        last_name: data.lastName.trim(),
-        phone_number: phone
-      }
-    ]);
-
-    if (profileError) {
-      console.error('Error saving profile to database:', profileError);
-    }
-
-    // Keep the new account signed out until phone verification and a later login.
-    if (signUpData.session) {
-      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
-      if (signOutError) {
-        console.error('Unable to end temporary signup session:', signOutError);
-        return {
-          success: false,
-          message: 'Your account was created, but we could not safely end the signup session. Please try again.',
-        };
-      }
-    }
-
-    // 3. Trigger PhilSMS OTP
+    // Send OTP FIRST. No Supabase account is created here.
     const otpResult = await sendPhilSMSOTP(phone, 'registration');
 
     if (!otpResult.success) {
       return {
         success: false,
-        message: otpResult.message ?? 'Unable to send OTP via PhilSMS. Please try again.'
+        message: otpResult.message || 'Unable to send OTP.'
       };
     }
 
     return {
       success: true,
       requiresOTP: true,
-      message: 'Please verify your phone number using the code sent by PhilSMS.',
-      phone: otpResult.phone,
+      message: 'Please enter the verification code sent to your phone.',
+      phone,
       otpHash: otpResult.otpHash,
       createdAt: otpResult.createdAt
     };
-
   } catch (error) {
-    console.error('Registration Error:', error);
+    console.error('Registration OTP error:', error);
+
     return {
       success: false,
-      message: 'An unexpected error occurred during registration.'
+      message: error instanceof Error
+        ? error.message
+        : 'Unable to start registration.'
     };
   }
 };
+
+// Call this ONLY after the registration OTP has been verified.
+
+export const completeSignUp = async (
+  data: SignUpPayload
+): Promise<AuthResponse> => {
+  try {
+    const email = data.email.trim().toLowerCase();
+    const phone = formatPhilippinePhone(data.phone);
+    const firstName = data.firstName.trim();
+    const lastName = data.lastName.trim();
+
+    const { data: signUpData, error: signUpError } =
+      await supabase.auth.signUp({
+        email,
+        password: data.password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            full_name: `${firstName} ${lastName}`,
+            phone_number: phone,
+            phone,
+          },
+        },
+      });
+
+    if (signUpError || !signUpData.user) {
+      return {
+        success: false,
+        message:
+          signUpError?.message || 'Unable to create your account.',
+      };
+    }
+
+    // The database trigger creates the profile and customer role.
+    // Do not insert or upsert the profile again from the frontend.
+
+    // If email confirmation is disabled and a session is created,
+    // sign out locally so the user must log in manually.
+    if (signUpData.session) {
+      const { error: signOutError } = await supabase.auth.signOut({
+        scope: 'local',
+      });
+
+      if (signOutError) {
+        console.error('Sign-out after registration failed:', signOutError);
+      }
+    }
+
+    return {
+      success: true,
+      message:
+        'Your account was created. Please check your email to confirm your account before logging in.',
+    };
+  } catch (error) {
+    console.error('Account creation error:', error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while creating your account.',
+    };
+  }
+};
+
+
 
 export async function handleLogout(): Promise<AuthResponse> {
   const { error } = await supabase.auth.signOut();

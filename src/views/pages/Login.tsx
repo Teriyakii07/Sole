@@ -61,6 +61,8 @@ export const LoginPage: React.FC = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isResetLoading, setIsResetLoading] = useState(false);
 
+  
+
   const handleTabSwitch = (tab: 'login' | 'signup') => {
     setActiveTab(tab);
     navigate(`/${tab}`);
@@ -146,40 +148,55 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
 
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleForgotPassword = async (
+  e: React.FormEvent<HTMLFormElement>
+) => {
+  e.preventDefault();
 
-    setResetMessage('');
-    setResetError('');
+  if (!resetEmail.trim()) {
+    setResetError('Please enter your email address.');
+    return;
+  }
 
-    if (!resetEmail.trim()) {
-      setResetError('Please enter your email address.');
+  setIsResetLoading(true);
+  setResetMessage('');
+  setResetError('');
+
+  try {
+    const result = await requestPasswordResetOTP(
+      resetEmail.trim()
+    );
+
+    if (!result.success) {
+      setResetError(result.message || 'Unable to send OTP.');
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail.trim())) {
-      setResetError('Please enter a valid email address.');
+    if (!result.otpHash) {
+      setResetError('OTP was sent, but the verification session is missing.');
       return;
     }
 
-    setIsResetLoading(true);
-    try {
-      const response = await requestPasswordResetOTP(resetEmail);
-      if (!response.success || !response.otpHash || !response.phone || !response.createdAt) {
-        setResetError(response.message || 'Unable to send a password reset code.');
-        return;
-      }
+    setResetOtpHash(result.otpHash);
+    setResetOtpCreatedAt(result.createdAt || Date.now());
+    setResetPhone(result.phone || '');
 
-      setResetOtpHash(response.otpHash);
-      setResetOtpCreatedAt(response.createdAt);
-      setResetPhone(response.phone);
-      setResetStep('otp');
-      setIsResetOtpModalOpen(true);
-      setResetMessage(`A verification code was sent to ${response.phone}.`);
-    } finally {
-      setIsResetLoading(false);
-    }
-  };
+    // Move to OTP step and immediately open the modal.
+    setResetStep('otp');
+    setIsResetOtpModalOpen(true);
+
+  } catch (error) {
+  console.error('Forgot password error:', error);
+
+  setResetError(
+    error instanceof Error
+      ? error.message
+      : 'Unable to process your password reset request. Please try again.'
+  );
+} finally {
+    setIsResetLoading(false);
+  }
+};
 
   const handleCompletePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -615,48 +632,29 @@ const onLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
       {/* 2FA LOGIN OTP MODAL */}
       <OTPModal
-        key={isResetOtpModalOpen ? resetOtpHash : 'closed'}
-        isOpen={isResetOtpModalOpen}
-        phone={resetPhone}
-        purpose="PASSWORD_RESET"
-        hash={resetOtpHash}
-        createdAt={resetOtpCreatedAt}
-        onClose={() => setIsResetOtpModalOpen(false)}
-        verifyCode={(code) => verifyPasswordResetOTP(resetOtpHash, code)}
-        onSuccess={(response) => {
-          if (!response.resetToken) {
-            setResetError('Unable to continue password reset. Request a new code.');
-            return;
-          }
-          setResetToken(response.resetToken);
-          setResetStep('password');
-          setResetMessage('');
-          setResetError('');
-          setIsResetOtpModalOpen(false);
-        }}
-      />
+  key={isResetOtpModalOpen ? resetOtpHash : 'closed'}
+  isOpen={isResetOtpModalOpen}
+  phone={resetPhone}
+  purpose="PASSWORD_RESET"
+  hash={resetOtpHash}
+  createdAt={resetOtpCreatedAt}
+  onClose={() => setIsResetOtpModalOpen(false)}
+  verifyCode={(code) => verifyPasswordResetOTP(resetOtpHash, code)}
+  onSuccess={(response) => {
+    if (!response.resetToken) {
+      setResetError(
+        'Unable to continue password reset. Request a new code.'
+      );
+      return;
+    }
 
-      {/* <OTPModal
-        isOpen={showOTP}
-        phone={otpPhone}
-        purpose="login"
-        hash={otpHash}
-        createdAt={otpCreatedAt}
-        onClose={() => {
-          cancelPendingLogin();
-          setShowOTP(false);
-        }}
-        onSuccess={async () => {
-          const result = await completeLogin();
-          setShowOTP(false);
-
-          if (result.success) {
-            navigate('/');
-          } else {
-            setErrors({ general: result.message });
-          }
-        }}
-      /> */}
+    setResetToken(response.resetToken);
+    setResetStep('password');
+    setResetMessage('');
+    setResetError('');
+    setIsResetOtpModalOpen(false);
+  }}
+/>
     </AuthLayout>
   );
 };

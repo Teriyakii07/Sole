@@ -8,7 +8,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-import { handleSignUp } from '../../controllers/authController';
+import { handleSignUp, completeSignUp } from '../../controllers/authController';
 import { AuthLayout } from '../components/Auth/AuthLayout';
 import { OTPModal } from '../components/Auth/OTPModal';
 
@@ -152,10 +152,9 @@ const [otpPhone, setOtpPhone] = useState('');
     }
 
     if (res.requiresOTP) {
-      setOtpPhone(res.phone || '');
+      setOtpPhone(res.phone || formData.phone);
       setOtpHash(res.otpHash || '');
       setOtpCreatedAt(res.createdAt || 0);
-
       setShowOTP(true);
     }
 
@@ -166,6 +165,45 @@ const [otpPhone, setOtpPhone] = useState('');
       general: 'Something went wrong. Please try again.'
     });
 
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+const handleRegistrationVerified = async () => {
+  setIsLoading(true);
+  setErrors({});
+
+  try {
+    const result = await completeSignUp(formData);
+
+    if (!result.success) {
+      setShowOTP(false);
+      setErrors({
+        general: result.message || 'Unable to create your account.'
+      });
+      return;
+    }
+
+    setShowOTP(false);
+
+    alert(
+      result.message || 'Account created successfully. Please log in.'
+    );
+
+    navigate('/login', {
+      replace: true,
+      state: { from }
+    });
+
+  } catch (error) {
+    console.error('Account creation after OTP failed:', error);
+
+    setShowOTP(false);
+    setErrors({
+      general: 'Phone verification succeeded, but account creation failed. Please try again.'
+    });
   } finally {
     setIsLoading(false);
   }
@@ -427,25 +465,7 @@ const [otpPhone, setOtpPhone] = useState('');
   hash={otpHash}
   createdAt={otpCreatedAt}
   onClose={() => setShowOTP(false)}
-  onSuccess={() => {
-    try {
-      setShowOTP(false);
-
-      alert('Phone verification successful! Please log in.');
-
-      navigate('/login', {
-        replace: true,
-        state: { from },
-      });
-
-    } catch (error) {
-      console.error('Post-registration verification error:', error);
-
-      setErrors({
-        general: 'Phone verification succeeded, but an error occurred. Please try logging in again.'
-      });
-    }
-  }}
+  onSuccess={handleRegistrationVerified}
 />
 
 
