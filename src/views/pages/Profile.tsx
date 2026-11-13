@@ -5,10 +5,10 @@ import { formatPrice } from '../../models/Cart';
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import type { Profile as ProfileData, Address, AddressFormData } from '../../models/Profile';
 import { handleLogout } from '../../controllers/authController';
+import DeliveryMap from '../components/Delivery/DeliveryMap';
 
 const inputClass = 'w-full min-w-0 rounded-lg border border-[#DDE1E7] bg-white px-3 py-3 text-xs outline-none focus:border-[#123A8C] focus:ring-2 focus:ring-blue-100';
 const primaryClass = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-[#123A8C] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#0D2D70]';
-
 function Icon({ name, size = 21 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
     user: <><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></>,
@@ -378,6 +378,8 @@ export default function Profile() {
   const c = useProfileController();
   const navigate = useNavigate();
 
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
 
@@ -583,16 +585,40 @@ export default function Profile() {
                         <article key={o.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 p-4">
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FC] text-[#123A8C]"><Icon name="package"/></div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="break-words text-sm font-bold">Order #{o.id}</h3>
+                            <h3 className="break-words text-sm font-bold">Order #{o.order_number}</h3>
                             <p className="mt-1 text-xs text-[#666]">Date: {o.date}</p>
                             <p className="mt-1 text-xs font-bold">Total: {formatPrice(o.total)}</p>
                           </div>
                           <span className="rounded-full bg-[#EAF6EE] px-3 py-2 text-[10px] font-bold text-[#247440]">{o.status || 'Processing'}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedOrder(
+                                expandedOrder === o.id ? null : o.id
+                              )
+                            }
+                            className="mt-4 text-sm font-bold text-[#123A8C] hover:text-[#D7192D]"
+                          >
+                            {expandedOrder === o.id
+                              ? 'HIDE DELIVERY MAP'
+                              : 'TRACK DELIVERY →'}
+                          </button>
+
+                          {expandedOrder === o.id && (
+                            <DeliveryMap orderId={o.id} />
+                          )}
                         </article>
+                        
+
+                        
                       ))}
                     </div>
+
+                    
                   )
+                  
                 )}
+                
 
                 {/* CART */}
                 {c.tab === 'cart' && (

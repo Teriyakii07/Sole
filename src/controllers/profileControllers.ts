@@ -40,9 +40,7 @@ export function useProfileController() {
     getFavorites()
   );
 
-  const [orders] = useState<Order[]>(() =>
-    load('sole_orders', [])
-  );
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -74,23 +72,44 @@ export function useProfileController() {
       if (userError) throw userError;
       if (!user) throw new Error('Please log in to view your profile.');
 
-      const [profileResult, addressResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone_number')
-          .eq('id', user.id)
-          .single(),
+  const [
+    profileResult,
+    addressResult,
+    ordersResult,
+  ] = await Promise.all([
+  supabase
+    .from('profiles')
+    .select('id, first_name, last_name, phone_number')
+    .eq('id', user.id)
+    .single(),
 
-        supabase
-          .from('addresses')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('is_default', { ascending: false })
-          .order('created_at', { ascending: false }),
-      ]);
+  supabase
+    .from('addresses')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: false }),
+
+  supabase
+    .from('orders')
+    .select('id, order_number, total_amount, status, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false }),
+]);
 
       if (profileResult.error) throw profileResult.error;
       if (addressResult.error) throw addressResult.error;
+      if (ordersResult.error) throw ordersResult.error;
+
+      setOrders(
+        (ordersResult.data ?? []).map((order) => ({
+          id: order.id,
+          order_number: order.order_number,
+          date: order.created_at,
+          total: Number(order.total_amount),
+          status: order.status,
+        }))
+      );
 
       setProfile({
         id: user.id,
@@ -99,8 +118,7 @@ export function useProfileController() {
         phone_number: profileResult.data.phone_number ?? '',
         email: user.email ?? '',
       });
-
-      setAddresses(addressResult.data ?? []);
+setAddresses(addressResult.data ?? []);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Unable to load your profile.'

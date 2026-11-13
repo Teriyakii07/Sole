@@ -5,6 +5,12 @@ import { useCartController } from '../../controllers/cartControllers';
 import { useProfileController } from '../../controllers/profileControllers';
 import { formatPrice } from '../../models/Cart';
 import { supabase } from '../../lib/supabaseClient';
+import {
+  geocodeDeliveryAddress,
+  initializeDeliveryTracking,
+} from '../../controllers/deliveryTrackingController';
+
+import { SOLE_STORE_ADDRESS } from '../../config/delivery';
 
 export default function Checkout() {
   const { cart, totalItems, subtotal, removeItem } = useCartController();
@@ -128,6 +134,40 @@ export default function Checkout() {
         .insert(orderItems);
 
       if (itemsInsertError) throw itemsInsertError;
+
+      // INITIALIZE DELIVERY TRACKING
+      // Tracking failure should not cancel an otherwise successful order.
+try {
+  const storeLocation = await geocodeDeliveryAddress(SOLE_STORE_ADDRESS);
+
+  const fullDeliveryAddress = [
+    selectedAddress.address_line,
+    selectedAddress.address_line_2,
+    selectedAddress.barangay,
+    selectedAddress.city,
+    selectedAddress.province,
+    selectedAddress.postal_code,
+    selectedAddress.country || "Philippines",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const destination = await geocodeDeliveryAddress(fullDeliveryAddress);
+
+  await initializeDeliveryTracking(
+    order.id,
+    storeLocation,
+    destination
+  );
+
+  console.log("Delivery tracking initialized:", {
+    orderId: order.id,
+    storeLocation,
+    destination,
+  });
+} catch (trackingError) {
+  console.error("Delivery tracking initialization failed:", trackingError);
+}
 
       // SAVE ITEMS FOR CONFIRMATION DISPLAY
       setPurchasedItems([...cart]);

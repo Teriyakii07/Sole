@@ -32,10 +32,11 @@ export interface Favorite {
 }
 
 export interface Order {
-  id: string
-  date: string
-  total: number
-  status: string
+  id: string;
+  order_number: string;
+  date: string;
+  total: number;
+  status: string;
 }
 
 export const emptyProfile: Profile = {
