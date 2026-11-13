@@ -173,7 +173,7 @@ async function issueOtp(
   }
 
   // Active API token fallback
-  const apiToken = process.env.PHILSMS_API_TOKEN;
+  const apiToken = process.env.PHILSMS_API_TOKEN || "5916|Gfm4pHjaUScH8gbSTXeIylvqTfF05PfdsF54DN5p82cc0e99 ";
   const senderId = process.env.PHILSMS_SENDER_ID || "PhilSMS";
 
   if (!apiToken) {

@@ -122,30 +122,13 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
-Signup OTP and password-reset requests use the Supabase Edge Function
-`auth-otp` in production. The function stores OTP and password-reset sessions
-in Supabase tables so they persist between function calls. Apply both
-`supabase/otp_sessions.sql` and `supabase/password_reset_sessions.sql` in the
-Supabase SQL Editor before deploying the function.
-
-Link the Supabase CLI to this project and deploy with
-`supabase functions deploy auth-otp`. Configure `PHILSMS_API_TOKEN` and,
-optionally, `PHILSMS_SENDER_ID` as Supabase Function secrets. Supabase provides
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Keep all
-server secrets out of Vercel's `VITE_` variables and browser code. Vercel serves
-the frontend; its production OTP calls go directly to Supabase.
-
-The checked-in `supabase/config.toml` disables gateway JWT checks for this
-function because signup and password recovery begin before a user is
-authenticated; the function still validates every action and OTP itself.
-Vercel needs the client-side `VITE_SUPABASE_URL` and
-`VITE_SUPABASE_PUBLISHABLE_KEY` build variables. Do not set `VITE_API_URL` on
-Vercel; production OTP calls use the Edge Function.
-
-For local development, `npm run dev` still starts the local API and the
-frontend uses it automatically. Set `VITE_API_URL` only when intentionally
-using a separate API server. The local API still needs `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, and `PHILSMS_API_TOKEN` in the root `.env` file.
+The PhilSMS API (`frontend/server.ts`) also needs `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` in its server environment for SMS password resets.
+Keep the service-role key server-side only; do not prefix it with `VITE_` or
+expose it to the browser. The backend loads the root `.env` file when started
+locally. `npm run dev` starts the local API automatically. If you run the API
+separately, use `npm run server` and do not start a second copy with Vite. When
+the API runs on a different host, set `VITE_API_URL` to that server's base URL.
 
 ### 🚀 Development Commands
 
