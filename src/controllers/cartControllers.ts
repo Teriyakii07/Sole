@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import type { CartItem } from '../models/Cart';
-import type { Product } from '../models/Product';
+import type { Product, ProductVariant } from '../models/Product';
 import {
   calculateTotalItems,
   calculateSubtotal,
@@ -12,7 +12,21 @@ const CART_STORAGE_KEY = 'sole-shopping-cart';
 function loadCart(): CartItem[] {
   try {
     const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-    return savedCart ? JSON.parse(savedCart) : [];
+
+    if (!savedCart) return [];
+
+    const parsedCart: unknown = JSON.parse(savedCart);
+
+    if (!Array.isArray(parsedCart)) return [];
+
+    // Remove old cart items that do not have variant IDs.
+    return parsedCart.filter(
+      (item): item is CartItem =>
+        typeof item.id === 'string' &&
+        typeof item.variantId === 'string' &&
+        typeof item.productId === 'string' &&
+        typeof item.quantity === 'number'
+    );
   } catch {
     return [];
   }
@@ -38,7 +52,10 @@ function saveCart(newCart: CartItem[]) {
   cartItems = newCart;
 
   try {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify(cartItems)
+    );
   } catch (error) {
     console.error('Unable to save cart:', error);
   }
@@ -71,20 +88,20 @@ export function useCartController() {
 
   const addToCart = (
     product: Product,
-    size: string,
+    variant: ProductVariant,
     quantity: number = 1
   ): void => {
     const productId = String(product.id);
-    const cartItemId = `${productId}-${size}`;
+    const cartItemId = variant.id;
 
     const existingItem = cartItems.find(
-      (item) => item.id === cartItemId
+      (item) => item.variantId === variant.id
     );
 
     if (existingItem) {
       saveCart(
         cartItems.map((item) =>
-          item.id === cartItemId
+          item.variantId === variant.id
             ? {
                 ...item,
                 quantity: item.quantity + quantity,
@@ -95,11 +112,14 @@ export function useCartController() {
     } else {
       const newItem: CartItem = {
         id: cartItemId,
+        variantId: variant.id,
+        productId,
         name: product.name,
-        price: product.price,
+        price: variant.price,
         image: product.image,
         quantity,
-        size,
+        size: variant.sizeLabel,
+        color: variant.color,
       };
 
       saveCart([...cartItems, newItem]);

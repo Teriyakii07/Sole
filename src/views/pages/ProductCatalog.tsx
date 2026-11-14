@@ -19,24 +19,22 @@ import {
   toggleFavorite,
   subscribeToFavorites,
 } from '../../controllers/favoritesControllers';
-import type { Product } from '../../models/Product';
-
-const shoeSizes = [
-  '5', '5.5', '6', '6.5', '7',
-  '7.5', '8', '8.5', '9', '9.5',
-];
+import type { Product, ProductVariant } from '../../models/Product';
 
 export default function ProductCatalog() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCartController();
   const { requireLogin } = useAuthPrompt();
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedVariant, setSelectedVariant] =
+    useState<ProductVariant | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error' | '';
@@ -56,7 +54,7 @@ export default function ProductCatalog() {
     }, 3000);
   }
 
-  // load product
+  // LOAD PRODUCT
   useEffect(() => {
     let isMounted = true;
 
@@ -74,7 +72,7 @@ export default function ProductCatalog() {
 
         if (isMounted) {
           setProduct(result);
-          setSelectedSize('');
+          setSelectedVariant(null);
           setQuantity(1);
         }
       } catch (err) {
@@ -86,9 +84,7 @@ export default function ProductCatalog() {
           );
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     }
 
@@ -99,7 +95,7 @@ export default function ProductCatalog() {
     };
   }, [id]);
 
-  // synch favorites
+  // SYNC FAVORITES
   useEffect(() => {
     if (!product) return;
 
@@ -112,7 +108,6 @@ export default function ProductCatalog() {
     return subscribeToFavorites(updateFavorite);
   }, [product]);
 
-  // LOADING
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -123,7 +118,6 @@ export default function ProductCatalog() {
     );
   }
 
-  // product not fount
   if (error || !product) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
@@ -132,9 +126,7 @@ export default function ProductCatalog() {
         </h2>
 
         {error && (
-          <p className="mt-2 text-sm text-red-600">
-            {error}
-          </p>
+          <p className="mt-2 text-sm text-red-600">{error}</p>
         )}
 
         <button
@@ -148,29 +140,45 @@ export default function ProductCatalog() {
     );
   }
 
-  // PRODUCT IS GUARANTEED TO EXIST BELOW THIS POINT
   const currentProduct = product;
-  const isOutOfStock = currentProduct.stockCount === 0;
-  const maximumQuantity =
-    typeof currentProduct.stockCount === 'number'
-      ? Math.max(1, Math.min(currentProduct.stockCount, 99))
-      : 99;
+
+  // Only active variants are available for selection.
+  const variants = (currentProduct.variants ?? []).filter(
+    (variant) => variant.isActive
+  );
+
+  const selectedStock = selectedVariant?.stockQuantity ?? 0;
+
+  const maximumQuantity = selectedVariant
+    ? Math.min(selectedStock, 99)
+    : 1;
+
+  const isOutOfStock =
+    variants.length === 0 ||
+    variants.every((variant) => variant.stockQuantity <= 0);
 
   function handleAddToBag(goToCheckout = false) {
-    // Require login before adding anything to the cart.
     if (!requireLogin()) return;
 
-    if (!selectedSize) {
+    if (!selectedVariant) {
       showNotification('Please select a shoe size first.', 'error');
       return;
     }
 
-    if (isOutOfStock) {
-      showNotification('Sorry, this product is out of stock.', 'error');
+    if (selectedVariant.stockQuantity <= 0) {
+      showNotification('This shoe size is out of stock.', 'error');
       return;
     }
 
-    addToCart(currentProduct, selectedSize, quantity);
+    if (quantity > selectedVariant.stockQuantity) {
+      showNotification(
+        `Only ${selectedVariant.stockQuantity} pair(s) available for this size.`,
+        'error'
+      );
+      return;
+    }
+
+    addToCart(currentProduct, selectedVariant, quantity);
 
     if (goToCheckout) {
       navigate('/checkout');
@@ -183,11 +191,9 @@ export default function ProductCatalog() {
   }
 
   function handleToggleFavorite() {
-    // Require login before changing favorites.
     if (!requireLogin()) return;
 
     const added = toggleFavorite(currentProduct);
-
     setIsFavorite(added);
 
     showNotification(
@@ -227,9 +233,7 @@ export default function ProductCatalog() {
 
           <div className="flex-1 pt-1">
             <p className="text-sm font-bold text-gray-900">
-              {notification.type === 'success'
-                ? 'Success'
-                : 'Notice'}
+              {notification.type === 'success' ? 'Success' : 'Notice'}
             </p>
 
             <p className="mt-1 text-xs leading-5 text-gray-600">
@@ -252,7 +256,7 @@ export default function ProductCatalog() {
 
       <div className="mx-auto grid max-w-[1450px] grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
 
-        {/* SINGLE PRODUCT IMAGE */}
+        {/* PRODUCT IMAGE */}
         <section className="lg:col-span-7">
           <div className="flex min-h-[400px] items-center justify-center rounded-xl bg-white sm:min-h-[600px] lg:min-h-[680px]">
             <img
@@ -271,7 +275,7 @@ export default function ProductCatalog() {
         {/* PRODUCT INFORMATION */}
         <section className="flex flex-col lg:col-span-5 lg:pt-2">
 
-          {/* PRODUCT NAME AND PRICE */}
+          {/* NAME AND PRICE */}
           <div className="flex items-start justify-between">
             <div>
               <p className="font-bold uppercase text-[#123A8C] underline underline-offset-4">
@@ -283,15 +287,17 @@ export default function ProductCatalog() {
               </h1>
 
               <p className="mt-3 text-xl font-bold text-gray-900">
-                {currentProduct.price.toLocaleString('en-PH', {
-                  style: 'currency',
-                  currency: 'PHP',
-                  maximumFractionDigits: 0,
-                })}
+                {(selectedVariant?.price ?? currentProduct.price).toLocaleString(
+                  'en-PH',
+                  {
+                    style: 'currency',
+                    currency: 'PHP',
+                    maximumFractionDigits: 0,
+                  }
+                )}
               </p>
             </div>
 
-            {/* FAVORITE BUTTON */}
             <button
               type="button"
               onClick={handleToggleFavorite}
@@ -311,14 +317,18 @@ export default function ProductCatalog() {
             <p>
               COLOR:{' '}
               <span className="font-semibold uppercase">
-                {currentProduct.color || 'Not specified'}
+                {selectedVariant?.color ||
+                  currentProduct.color ||
+                  'Not specified'}
               </span>
             </p>
 
             <p>
               PRODUCT SKU:{' '}
               <span className="font-semibold">
-                {currentProduct.styleCode || 'Not specified'}
+                {selectedVariant?.sku ||
+                  currentProduct.styleCode ||
+                  'Not specified'}
               </span>
             </p>
           </div>
@@ -331,21 +341,27 @@ export default function ProductCatalog() {
           )}
 
           {/* STOCK INFORMATION */}
-          {typeof currentProduct.stockCount === 'number' && (
-            <p
-              className={`mt-5 text-sm font-bold ${
-                isOutOfStock
+          <p
+            className={`mt-5 text-sm font-bold ${
+              !selectedVariant
+                ? isOutOfStock
                   ? 'text-red-600'
                   : 'text-gray-700'
-              }`}
-            >
-              {isOutOfStock
+                : selectedStock <= 0
+                  ? 'text-red-600'
+                  : 'text-gray-700'
+            }`}
+          >
+            {!selectedVariant
+              ? isOutOfStock
                 ? 'OUT OF STOCK'
-                : currentProduct.stockCount <= 3
-                  ? `ONLY ${currentProduct.stockCount} LEFT — MAKE IT YOURS!`
-                  : 'IN STOCK'}
-            </p>
-          )}
+                : 'SELECT A SIZE TO CHECK STOCK'
+              : selectedStock <= 0
+                ? 'THIS SIZE IS OUT OF STOCK'
+                : selectedStock <= 3
+                  ? `ONLY ${selectedStock} LEFT — MAKE IT YOURS!`
+                  : `${selectedStock} PAIRS AVAILABLE`}
+          </p>
 
           {/* SIZE SELECTION */}
           <div className="mt-8">
@@ -353,7 +369,9 @@ export default function ProductCatalog() {
               <p className="text-sm">
                 SIZE:{' '}
                 <span className="font-bold text-[#123A8C]">
-                  {selectedSize ? `US ${selectedSize}` : 'US'}
+                  {selectedVariant
+                    ? `US ${selectedVariant.sizeLabel}`
+                    : 'US'}
                 </span>
               </p>
 
@@ -369,24 +387,43 @@ export default function ProductCatalog() {
             </div>
 
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
-              {shoeSizes.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => setSelectedSize(size)}
-                  className={`flex min-h-[65px] flex-col items-center justify-center border transition ${
-                    selectedSize === size
-                      ? 'border-[#123A8C] bg-[#123A8C] text-white'
-                      : 'border-gray-300 bg-white text-gray-900 hover:border-[#123A8C]'
-                  }`}
-                >
-                  <span className="text-[10px]">US M</span>
-                  <span className="text-lg font-semibold">
-                    {size}
-                  </span>
-                </button>
-              ))}
+              {variants.map((variant) => {
+                const outOfStock = variant.stockQuantity <= 0;
+
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    disabled={outOfStock}
+                    onClick={() => {
+                      setSelectedVariant(variant);
+                      setQuantity(1);
+                    }}
+                    className={`flex min-h-[65px] flex-col items-center justify-center border transition ${
+                      selectedVariant?.id === variant.id
+                        ? 'border-[#123A8C] bg-[#123A8C] text-white'
+                        : outOfStock
+                          ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 line-through'
+                          : 'border-gray-300 bg-white text-gray-900 hover:border-[#123A8C]'
+                    }`}
+                  >
+                    <span className="text-[10px]">US M</span>
+                    <span className="text-lg font-semibold">
+                      {variant.sizeLabel}
+                    </span>
+                    {outOfStock && (
+                      <span className="text-[9px]">SOLD OUT</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+
+            {variants.length === 0 && (
+              <p className="mt-3 text-sm text-red-600">
+                No active shoe sizes are available for this product.
+              </p>
+            )}
           </div>
 
           {/* QUANTITY */}
@@ -398,7 +435,7 @@ export default function ProductCatalog() {
             <div className="flex items-center gap-7">
               <button
                 type="button"
-                disabled={quantity <= 1}
+                disabled={quantity <= 1 || !selectedVariant}
                 onClick={() =>
                   setQuantity((current) => Math.max(1, current - 1))
                 }
@@ -415,7 +452,8 @@ export default function ProductCatalog() {
               <button
                 type="button"
                 disabled={
-                  quantity >= maximumQuantity || isOutOfStock
+                  !selectedVariant ||
+                  quantity >= maximumQuantity
                 }
                 onClick={() =>
                   setQuantity((current) =>

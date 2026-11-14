@@ -115,6 +115,17 @@ export async function getHomepageProducts(): Promise<Product[]> {
       category: getRelationName(item.categories),
       description: item.description ?? '',
       stockCount: totalStock,
+
+      // Preserve the available shoe variants and their database IDs
+      variants: availableVariants.map((variant) => ({
+        id: variant.id,
+        price: Number(variant.price),
+        stockQuantity: Number(variant.stock_quantity),
+        sizeLabel: variant.size_label,
+        color: variant.color,
+        isActive: variant.is_active,
+      })),
+
       createdAt: item.created_at,
     };
   });
@@ -202,6 +213,18 @@ export async function getProductById(
     color: firstVariant?.color ?? '',
     description: data.description ?? '',
     stockCount: totalStock,
+
+    // Preserve the available shoe variants and their database IDs
+    variants: availableVariants.map((variant) => ({
+      id: variant.id,
+      sku: variant.sku,
+      price: Number(variant.price),
+      stockQuantity: Number(variant.stock_quantity),
+      sizeLabel: variant.size_label,
+      color: variant.color,
+      isActive: variant.is_active,
+    })),
+
     createdAt: data.created_at,
   };
 }

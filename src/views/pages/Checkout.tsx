@@ -14,21 +14,25 @@ import { SOLE_STORE_ADDRESS } from '../../config/delivery';
 
 export default function Checkout() {
   const { cart, totalItems, subtotal, removeItem } = useCartController();
+
   const {
     profile,
     addresses,
     loading,
     error,
   } = useProfileController();
+
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderMessage, setOrderMessage] = useState('');
   const [orderError, setOrderError] = useState('');
   const [purchasedItems, setPurchasedItems] = useState<typeof cart>([]);
-  const [purchasedOrderNumber, setPurchasedOrderNumber] = useState('')
+  const [purchasedOrderNumber, setPurchasedOrderNumber] = useState('');
+
   const shippingFee = subtotal >= 3000 ? 0 : 150;
   const total = subtotal + shippingFee;
+
   const selectedAddress =
     addresses.find((address) => address.id === selectedAddressId) ||
     addresses.find((address) => address.is_default) ||
@@ -54,9 +58,15 @@ export default function Checkout() {
       return;
     }
 
-    setPlacingOrder(true);
+    // Make sure every item has its actual Supabase variant ID.
+    if (cart.some((item) => !item.variantId)) {
+      setOrderError(
+        'A cart item is missing its product variant. Please remove it and add the item again.'
+      );
+      return;
+    }
 
-    let orderId: string | null = null;
+    setPlacingOrder(true);
 
     try {
       // GET SIGNED-IN USER
@@ -75,98 +85,84 @@ export default function Checkout() {
       const orderNumber =
         `SOLE-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      // SAVE ORDER
-      const { data: order, error: orderInsertError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: orderNumber,
-          user_id: user.id,
-          address_id: selectedAddress.id,
-          recipient_name: selectedAddress.recipient_name,
-          recipient_phone: selectedAddress.phone_number,
-          address_line: selectedAddress.address_line,
-          address_line_2: selectedAddress.address_line_2 || null,
-          barangay: selectedAddress.barangay,
-          city: selectedAddress.city,
-          province: selectedAddress.province,
-          postal_code: selectedAddress.postal_code,
-          country: selectedAddress.country,
-          subtotal,
-          shipping_fee: shippingFee,
-          discount_amount: 0,
-          total_amount: total,
-          status: 'pending',
-          notes: `Payment method: ${
-            paymentMethod === 'cod'
-              ? 'Cash on Delivery'
-              : 'PayMongo'
-          }`,
-        })
-        .select('id')
-        .single();
-
-      if (orderInsertError) throw orderInsertError;
-
-      orderId = order.id;
-
-      // SAVE PURCHASED ITEMS
+      // PREPARE ORDER ITEMS
+      // The database will check the actual stock and price.
       const orderItems = cart.map((item) => ({
-        order_id: order.id,
-        variant_id: null,
-        product_name: item.name,
-        sku: null,
-        size_label: item.size || null,
-        color: null,
+        variant_id: item.variantId,
         quantity: item.quantity,
-        unit_price: item.price,
-        subtotal: item.price * item.quantity,
       }));
 
-      const { error: itemsInsertError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      // CREATE ORDER + SAVE ITEMS + DEDUCT STOCK
+      // This calls the PostgreSQL function created in Supabase.
+      const { data: orderId, error: orderError } =
+        await supabase.rpc('place_sole_order', {
+          p_order_number: orderNumber,
+          p_address_id: selectedAddress.id,
+          p_recipient_name: selectedAddress.recipient_name,
+          p_recipient_phone: selectedAddress.phone_number,
+          p_address_line: selectedAddress.address_line,
+          p_address_line_2: selectedAddress.address_line_2 || null,
+          p_barangay: selectedAddress.barangay,
+          p_city: selectedAddress.city,
+          p_province: selectedAddress.province,
+          p_postal_code: selectedAddress.postal_code,
+          p_country: selectedAddress.country || 'Philippines',
+          p_payment_method: paymentMethod,
+          p_items: orderItems,
+        });
 
-      if (itemsInsertError) throw itemsInsertError;
+      if (orderError) throw orderError;
+
+      if (!orderId) {
+        throw new Error(
+          'The order could not be created. Please try again.'
+        );
+      }
 
       // INITIALIZE DELIVERY TRACKING
-      // Tracking failure should not cancel an otherwise successful order.
-try {
-  const storeLocation = await geocodeDeliveryAddress(SOLE_STORE_ADDRESS);
+      // Tracking failure should not cancel a successful order.
+      try {
+        const storeLocation =
+          await geocodeDeliveryAddress(SOLE_STORE_ADDRESS);
 
-  const fullDeliveryAddress = [
-    selectedAddress.address_line,
-    selectedAddress.address_line_2,
-    selectedAddress.barangay,
-    selectedAddress.city,
-    selectedAddress.province,
-    selectedAddress.postal_code,
-    selectedAddress.country || "Philippines",
-  ]
-    .filter(Boolean)
-    .join(", ");
+        const fullDeliveryAddress = [
+          selectedAddress.address_line,
+          selectedAddress.address_line_2,
+          selectedAddress.barangay,
+          selectedAddress.city,
+          selectedAddress.province,
+          selectedAddress.postal_code,
+          selectedAddress.country || 'Philippines',
+        ]
+          .filter(Boolean)
+          .join(', ');
 
-  const destination = await geocodeDeliveryAddress(fullDeliveryAddress);
+        const destination =
+          await geocodeDeliveryAddress(fullDeliveryAddress);
 
-  await initializeDeliveryTracking(
-    order.id,
-    storeLocation,
-    destination
-  );
+        await initializeDeliveryTracking(
+          orderId,
+          storeLocation,
+          destination
+        );
 
-  console.log("Delivery tracking initialized:", {
-    orderId: order.id,
-    storeLocation,
-    destination,
-  });
-} catch (trackingError) {
-  console.error("Delivery tracking initialization failed:", trackingError);
-}
+        console.log('Delivery tracking initialized:', {
+          orderId,
+          storeLocation,
+          destination,
+        });
+      } catch (trackingError) {
+        console.error(
+          'Delivery tracking initialization failed:',
+          trackingError
+        );
+      }
 
       // SAVE ITEMS FOR CONFIRMATION DISPLAY
       setPurchasedItems([...cart]);
       setPurchasedOrderNumber(orderNumber);
 
-      // SHOW CONFIRMATION MESSAGE IMMEDIATELY
+      // SHOW CONFIRMATION MESSAGE
       setOrderMessage(
         `Your order ${orderNumber} has been successfully placed! Your confirmation email is being processed.`
       );
@@ -205,8 +201,8 @@ try {
     } catch (err: unknown) {
       console.error('Checkout error:', err);
 
-      // SHOW THE ACTUAL ERROR
-      let errorMessage = 'Unknown error. Please check the browser console.';
+      let errorMessage =
+        'Unknown error. Please check the browser console.';
 
       if (err instanceof Error) {
         errorMessage = err.message;
@@ -232,21 +228,6 @@ try {
           .join(' | ');
       }
 
-      // REMOVE INCOMPLETE ORDER IF ITEM SAVING FAILED
-      if (orderId) {
-        const { error: deleteError } = await supabase
-          .from('orders')
-          .delete()
-          .eq('id', orderId);
-
-        if (deleteError) {
-          console.error(
-            'Unable to remove incomplete order:',
-            deleteError
-          );
-        }
-      }
-
       setOrderError(errorMessage);
 
     } finally {
@@ -254,6 +235,7 @@ try {
     }
   }
 
+  // ORDER CONFIRMATION PAGE
   if (purchasedOrderNumber) {
     return (
       <div className="min-h-screen bg-white py-12 px-4 sm:px-6">
@@ -339,7 +321,7 @@ try {
     );
   }
 
-  //cart
+  // EMPTY CART
   if (cart.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F6FA]">
@@ -361,6 +343,7 @@ try {
     );
   }
 
+  // LOADING PROFILE
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -371,6 +354,7 @@ try {
     );
   }
 
+  // CHECKOUT PAGE
   return (
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">

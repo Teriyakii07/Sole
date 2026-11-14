@@ -571,50 +571,131 @@ export default function Profile() {
                   )
                 )}
 
-                {/* ORDERS */}
-                {c.tab === 'orders' && (
-                  c.orders.length === 0 ? (
-                    <EmptyState icon="package" title="No orders yet" message="Your completed and ongoing orders will appear here." action="Start Shopping"/>
-                  ) : (
-                    <div className="space-y-3">
-                      {c.orders.map(o => (
-                        <article key={o.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 p-4">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FC] text-[#123A8C]"><Icon name="package"/></div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="break-words text-sm font-bold">Order #{o.order_number}</h3>
-                            <p className="mt-1 text-xs text-[#666]">Date: {o.date}</p>
-                            <p className="mt-1 text-xs font-bold">Total: {formatPrice(o.total)}</p>
-                          </div>
-                          <span className="rounded-full bg-[#EAF6EE] px-3 py-2 text-[10px] font-bold text-[#247440]">{o.status || 'Processing'}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedOrder(
-                                expandedOrder === o.id ? null : o.id
-                              )
-                            }
-                            className="mt-4 text-sm font-bold text-[#123A8C] hover:text-[#D7192D]"
-                          >
-                            {expandedOrder === o.id
-                              ? 'HIDE DELIVERY MAP'
-                              : 'TRACK DELIVERY →'}
-                          </button>
+             
+{/* ORDERS */}
+{c.tab === 'orders' && (
+  c.orders.length === 0 ? (
+    <EmptyState
+      icon="package"
+      title="No orders yet"
+      message="Your completed and ongoing orders will appear here."
+      action="Start Shopping"
+    />
+  ) : (
+    <div className="space-y-5">
+      {c.orders.map((o) => {
+        const isExpanded = expandedOrder === o.id;
 
-                          {expandedOrder === o.id && (
-                            <DeliveryMap orderId={o.id} />
-                          )}
-                        </article>
-                        
+        return (
+          <article
+            key={o.id}
+            className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
+          >
+            {/* ORDER HEADER */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FC] text-[#123A8C]">
+                  <Icon name="package" />
+                </div>
 
-                        
-                      ))}
-                    </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500">
+                    Order Number
+                  </p>
 
-                    
+                  <h3 className="mt-1 break-all text-sm font-bold text-gray-900">
+                    #{o.order_number}
+                  </h3>
+                </div>
+              </div>
+
+              <span
+                className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                  o.status?.toLowerCase() === 'delivered'
+                    ? 'bg-green-50 text-green-700'
+                    : o.status?.toLowerCase() === 'cancelled'
+                    ? 'bg-red-50 text-red-700'
+                    : 'bg-blue-50 text-[#123A8C]'
+                }`}
+              >
+                {o.status || 'Processing'}
+              </span>
+            </div>
+
+            {/* ORDER DETAILS */}
+            <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2">
+              <div>
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Icon name="calendar" />
+                  <span className="text-xs font-medium">
+                    Order Date
+                  </span>
+                </div>
+
+                <p className="mt-2 text-sm font-semibold text-gray-800">
+                  {o.date}
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Icon name="wallet" />
+                  <span className="text-xs font-medium">
+                    Total Amount
+                  </span>
+                </div>
+
+                <p className="mt-2 text-lg font-bold text-[#123A8C]">
+                  {formatPrice(o.total)}
+                </p>
+              </div>
+            </div>
+
+            {/* TRACK DELIVERY BUTTON */}
+            <div className="border-t border-gray-100 bg-gray-50/70 px-5 py-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedOrder(
+                    isExpanded ? null : o.id
                   )
-                  
-                )}
-                
+                }
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-[#123A8C] bg-white px-4 py-3 text-sm font-bold text-[#123A8C] transition hover:bg-[#123A8C] hover:text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <Icon name="map-pin" />
+                  {isExpanded ? 'HIDE DELIVERY TRACKING' : 'TRACK YOUR ORDER'}
+                </span>
+
+                <Icon
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                />
+              </button>
+
+              {/* DELIVERY MAP */}
+              {isExpanded && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+                  <div className="mb-3">
+                    <h4 className="text-sm font-bold text-gray-900">
+                      Delivery Tracking
+                    </h4>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Follow your order's delivery progress.
+                    </p>
+                  </div>
+
+                  <DeliveryMap orderId={o.id} />
+                </div>
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  )
+)}
+
 
                 {/* CART */}
                 {c.tab === 'cart' && (

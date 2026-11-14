@@ -1,4 +1,14 @@
 
+export interface ProductVariant {
+  id: string;
+  sku?: string;
+  price: number;
+  stockQuantity: number;
+  sizeLabel: string;
+  color?: string;
+  isActive: boolean;
+}
+
 export interface Product {
   id: string | number;
   name: string;
@@ -13,6 +23,7 @@ export interface Product {
   stockCount?: number;
   galleryImages?: string[];
   createdAt?: string;
+  variants?: ProductVariant[];
 }
 
 export interface HomeCategory {

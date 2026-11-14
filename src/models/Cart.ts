@@ -1,11 +1,14 @@
 
 export interface CartItem {
   id: string;
+  variantId: string;
+  productId: string;
   name: string;
   price: number;
   image: string;
   quantity: number;
   size?: string;
+  color?: string;
 }
 
 export const calculateTotalItems = (cart: CartItem[]) =>
